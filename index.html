@@ -150,7 +150,7 @@ const STAFF = [
   { nama: "Zulfikar Azizi", nik: "PR322" },
   { nama: "Muhammad Harsya", nik: "PR148" },
   { nama: "Tubagus Hikmat Ibrahim", nik: "PR030" },
-  { nama: "Abdul Muhdy", nik: "PR030" },
+  { nama: "Abdul Muhdy", nik: "PR12" },
 ];
 
 const OUTLETS = [
@@ -1002,6 +1002,8 @@ const OUTLETS = [
   { kode: "KAI", lokasi: "Transportasi Kereta" },
   { kode: "OJL", lokasi: "Transportasi Ojek Online" },
   { kode: "KPL", lokasi: "Transportasi Kapal" },
+  { kode: "K01", lokasi: "Survey Lokasi" },
+
 ];
 </script>
 <body>
@@ -1244,7 +1246,7 @@ function initSelects(){
 
 function renderHeaderRight(){
   const el = document.getElementById("headerRight");
-  document.getElementById("pageTitle").textContent = view === "admin" ? "Dashboard admin reimbursement" : "Klaim reimbursement staff";
+  document.getElementById("pageTitle").textContent = view === "admin" ? "Dashboard admin reimbursement" : "Reimbursement staff";
   if(view === "admin"){
     el.innerHTML = `
       <div style="display:flex; gap:8px; align-items:center;">
