@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Klaim Reimbursement Staff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<link rel="stylesheet" href="reimbursement-staff.css">
+</head>
+<script>
+const OUTLETS = [
+  { kode: "A001", lokasi: "Ancol Dufan Ice Age Indoor Playgound" },
+  { kode: "A001A", lokasi: "Ancol Dufan Kawasan Hikayat" },
+  { kode: "A002", lokasi: "Dago Dreampark Lokasi Area Pinehouse" },
+  { kode: "A002A", lokasi: "Dago Dreampark Lokasi Area Pirate" },
+  { kode: "A005", lokasi: "Taman Aerosport Pekanbaru" },
+  { kode: "A006", lokasi: "Sariater Lobby Area" },
+  { kode: "A006A", lokasi: "Sariater Area Kolam Kimanis" },
+  { kode: "A007", lokasi: "Go! Wet Waterpark Grand Wisata" },
+  { kode: "A009", lokasi: "Heha Sky View Yogyakarta" },
+  { kode: "A011", lokasi: "The Great Asia Africa Bandung Lt.1" },
+  { kode: "A011A", lokasi: "The Great Asia Africa Bandung Lt.B3" },
+  { kode: "A012", lokasi: "Farm House Lembang" },
+  { kode: "A013", lokasi: "Candi Prambanan - Pintu Keluar Objek Wisata" },
+  { kode: "A013A", lokasi: "Candi Prambanan - Pintu Keluar Candi" },
+  { kode: "A016", lokasi: "Mikie Holiday DO" },
+  { kode: "A016A", lokasi: "Mikie Holiday Star Teather" },
+  { kode: "A016B", lokasi: "Mikie Holiday Hotel" },
+  { kode: "A017", lokasi: "Floating Market Lembang" },
+  { kode: "A018", lokasi: "Heha Ocean View Yogyakarta" },
+  { kode: "A020", lokasi: "Asstro Highland Ciater" },
+  { kode: "A021", lokasi: "DCastello Ciater Lokasi Foodcourt" },
+  { kode: "A021A", lokasi: "DCastello Ciater Lokasi Tempat Oleh-Oleh" },
+  { kode: "A022", lokasi: "Ancol Sea World Area Museum" },
+  { kode: "A022A", lokasi: "Ancol Sea World Area Foodcourt" },
+  { kode: "A023", lokasi: "Jatim Park 3 - Dekat Indomaret" },
+  { kode: "A023A", lokasi: "Jatim Park 3 - Depan Brasco" },
+  { kode: "A023B", lokasi: "Jatim Park 3 - Funtech" },
+  { kode: "A025", lokasi: "Rasamadu Heritage" },
+  { kode: "A027", lokasi: "Nicoles River Park Area Loby" },
+  { kode: "A027A", lokasi: "Nicoles River Park Area Carnaval Dan Resto" },
+  { kode: "A028", lokasi: "Taman Bunga Celosia - Foodcourt Atas" },
+  { kode: "A028A", lokasi: "Taman Bunga Celosia - Exit" },
+  { kode: "A028B", lokasi: "Taman Bunga Celosia - Lorong" },
+  { kode: "A029", lokasi: "Kidzania Surabaya" },
+  { kode: "A030", lokasi: "Brasco Factory Outlet" },
+  { kode: "A031", lokasi: "Taman Safari Indonesia" },
+  { kode: "A033", lokasi: "Hillpark Sibolangit Foodcourt" },
+  { kode: "A033A", lokasi: "Hillpark Sibolangit Lobby" },
+  { kode: "A036", lokasi: "Lokawisata Baturaden" },
+  { kode: "A037", lokasi: "Menara Pandang Teratai Purwokerto" },
+  { kode: "A038", lokasi: "Taman Mas Kemambang Lokasi Depan Loket 2" },
+  { kode: "A038A", lokasi: "Taman Mas Kemambang Lokasi Belakang Rumah Makan Warras" },
+  { kode: "A039", lokasi: "Ancol Ocean Dream Samudra Lokasi Under Water" },
+  { kode: "A039A", lokasi: "Ancol Ocean Dream Samudra Lokasi 5D" },
+  { kode: "A040", lokasi: "Museum Listrik Dan Energi Baru TMII" },
+  { kode: "A041", lokasi: "Saloka Theme Park Lokasi Stasiun" },
+  { kode: "A041A", lokasi: "Saloka Theme Park Lokasi Polah Bocah" },
+  { kode: "A044", lokasi: "Cluring Waterpark" },
+  { kode: "A045", lokasi: "The Bagong Adventure Museum Tubuh" },
+  { kode: "A046", lokasi: "Batu Love Garden" },
+  { kode: "A047", lokasi: "Taman Ruang Playground Riau" },
+  { kode: "A048", lokasi: "Eco Green Park" },
+  { kode: "A050", lokasi: "Beefun Playland Surabaya" },
+  { kode: "A051", lokasi: "Beefun Playland Sidoarjo" },
+  { kode: "A052", lokasi: "Museum Angkut Malang" },
+  { kode: "A054", lokasi: "Taman Rekreasi Selecta" },
+  { kode: "A055", lokasi: "Siantar Waterpark" },
+  { kode: "A057A", lokasi: "Water Kingdom Mekarsari Lokasi Yokabento" },
+  { kode: "A061", lokasi: "Bogor Aquagame" },
+  { kode: "A062", lokasi: "Scientia Square Park" },
+  { kode: "A063", lokasi: "Taman Balekambang Surakarta" },
+  { kode: "A064", lokasi: "Atlantis Water Adventure Ancol" },
+  { kode: "A065", lokasi: "Supersplash Waterpark Kartika Residence" },
+  { kode: "A066", lokasi: "Snowville Sentul" },
+  { kode: "A067", lokasi: "Safari Solo" },
+  { kode: "A068", lokasi: "Jatim Park 1" },
+  { kode: "A069", lokasi: "Skyward Project Bandung Area Locker Room" },
+  { kode: "A069A", lokasi: "Skyward Project Bandung Area Slide" },
+  { kode: "A070", lokasi: "Caliandra Gallery Sariater Campervan Park" },
+  { kode: "A072", lokasi: "Dusun Bambu Lembang" },
+  { kode: "A072A", lokasi: "Dusun Bambu Lembang Watercoaster" },
+  { kode: "A073", lokasi: "De Valais Garden & Resto" },
+  { kode: "A074", lokasi: "Wisata Bukit Domba Sentul" },
+  { kode: "AT001", lokasi: "Area Test 1" },
+  { kode: "AT002", lokasi: "Area Test 2" },
+  { kode: "B001", lokasi: "Tirtonadi Solo" },
+  { kode: "B002", lokasi: "Terminal Tingkir Salatiga" },
+  { kode: "B004", lokasi: "Terminal Tidar Magelang" },
+  { kode: "B005", lokasi: "Terminal Tegal" },
+  { kode: "B006", lokasi: "Terminal Tipe A Gambut Barakat" },
+  { kode: "C001", lokasi: "RS Bhakti Timah Pangkalpinang Lt. 1" },
+  { kode: "C001A", lokasi: "RS Bhakti Timah Pangkalpinang Lt. 2" },
+  { kode: "C004", lokasi: "RS Islam Sultan Agung Banjarbaru Klinik Urologi" },
+  { kode: "C004A", lokasi: "RS Islam Sultan Agung Banjarbaru Customer Service" },
+  { kode: "C005", lokasi: "RS Indriati Solo Baru" },
+  { kode: "C006", lokasi: "RS Aulia Pekanbaru" },
+  { kode: "C007", lokasi: "RSAU Dr M Hasan Toto Bogor" },
+  { kode: "C008", lokasi: "RSUD Cempaka Lima Aceh" },
+  { kode: "C009", lokasi: "Klinik Cempaka Lima Aceh" },
+  { kode: "C010", lokasi: "RS Siloam Lippo Village Ruang Internist" },
+  { kode: "C010A", lokasi: "RS Siloam Lippo Village MCU" },
+  { kode: "C010B", lokasi: "RS Siloam Lippo Village Ruang Tunggu Lt.6" },
+  { kode: "C011", lokasi: "RS MRCCC Siloam Semanggi" },
+  { kode: "C013", lokasi: "RSIA Cempaka Azzahra Aceh" },
+  { kode: "C014", lokasi: "RS Indriati Boyolali Lt. 1" },
+  { kode: "C014A", lokasi: "RS Indriati Boyolali Lt. 2" },
+  { kode: "C015", lokasi: "RS DR Bratanata Jambi" },
+  { kode: "C016", lokasi: "RS Mayapada Tanggerang Gedung 2 Lt 1 Ruang Orthopedi" },
+  { kode: "C016A", lokasi: "RS Mayapada Tanggerang Gedung 2 Lt 1 Ruang Cardio" },
+  { kode: "C016B", lokasi: "RS Mayapada Tanggerang Gedung 3 Lt 1 Ruang Farmasi" },
+  { kode: "C016C", lokasi: "RS Mayapada Tanggerang Gedung 3 Lt 3 Ruang Tunggu" },
+  { kode: "C016D", lokasi: "RS Mayapada Tanggerang Gedung 3 Lt 3 Ruang Basment" },
+  { kode: "C016E", lokasi: "RS Mayapada Tanggerang Gedung 1 Lt 1 Ruang Tnc" },
+  { kode: "C016F", lokasi: "RS Mayapada Tanggerang Gedung 1 Lt 1 Ruang Fastrack" },
+  { kode: "C016G", lokasi: "RS Mayapada Tanggerang Gedung 1 Lt 1 Ruang Farmasi Center" },
+  { kode: "C016H", lokasi: "RS Mayapada Tanggerang Gedung 1 Lt 2 Ruang Lab" },
+  { kode: "C016I", lokasi: "RS Mayapada Tanggerang Gedung 1 Lt 2 Ruang Pendaftaran" },
+  { kode: "C016J", lokasi: "RS Mayapada Tanggerang Gedung 1 Lt 3 Ruang MCU" },
+  { kode: "C017", lokasi: "RS Islam Siti Hajar Poli Paru" },
+  { kode: "C017A", lokasi: "RS Islam Siti Hajar Poli Eksekutif" },
+  { kode: "C018", lokasi: "RS Eria Pekanbaru" },
+  { kode: "C019", lokasi: "RSUD Dr Adjidarmo Rangkasbitung Gedung C Lt. 1" },
+  { kode: "C019B", lokasi: "RSUD Dr Adjidarmo Rangkasbitung Gedung B Lt. 2" },
+  { kode: "C020", lokasi: "Klinik Utama Fakhira" },
+  { kode: "C021", lokasi: "RS Ananda Purwokerto" },
+  { kode: "C022", lokasi: "RSUD Gambiran Kota Kediri" },
+  { kode: "C023", lokasi: "RSUD Khidmat Sehat Afiat KISA Depok Lt. 1" },
+  { kode: "C023A", lokasi: "RSUD Khidmat Sehat Afiat KISA Depok Lt. 2" },
+  { kode: "C025", lokasi: "RSUD Kota Mataram Ruang Nifas" },
+  { kode: "C026", lokasi: "RS Siloam Bogor" },
+  { kode: "C027", lokasi: "RS Universitas Sebelas Maret" },
+  { kode: "C028", lokasi: "RSUD Simpang Lima Gumul Kediri Lt. 2" },
+  { kode: "C029", lokasi: "RSUD Teluk Kuantan Ruang Rawat Inap" },
+  { kode: "C029A", lokasi: "RSUD Teluk Kuantan Ruang Karyawan" },
+  { kode: "C029B", lokasi: "RSUD Teluk Kuantan Lobby" },
+  { kode: "C030", lokasi: "RSUD Praya Ruang Tunggu Farmasi" },
+  { kode: "C030A", lokasi: "RSUD Praya Poliklinik I" },
+  { kode: "C031", lokasi: "Skinologic Clinic" },
+  { kode: "C032", lokasi: "Apotek Wellings Tebet" },
+  { kode: "C034", lokasi: "RS Medika Dramaga" },
+  { kode: "C035", lokasi: "Norma Aesthetic Clinic Madiun" },
+  { kode: "C036", lokasi: "RSU Banjar Patroman" },
+  { kode: "C037A", lokasi: "RSUD Kardinah Tegal Ruang Informasi" },
+  { kode: "C037B", lokasi: "RSUD Kardinah Tegal Ruang Dewadaru" },
+  { kode: "C037C", lokasi: "RSUD Kardinah Tegal Ruang RA Kartini" },
+  { kode: "C037D", lokasi: "RSUD Kardinah Tegal Ruang Komite" },
+  { kode: "C038", lokasi: "RSUD Cimacan" },
+  { kode: "C039", lokasi: "RS Bhayangkara Kediri" },
+  { kode: "C039A", lokasi: "RS Bhayangkara Kediri Lt.2" },
+  { kode: "C040", lokasi: "RS Islam Aminah Blitar" },
+  { kode: "C041", lokasi: "RS. Dadi Keluarga Ciamis" },
+  { kode: "C044", lokasi: "Rs Murni Teguh Memorial" },
+  { kode: "C045", lokasi: "Rsia Murni Teguh Rosiva" },
+  { kode: "C046", lokasi: "Rsu Murni Teguh Methodist Susanna Wesley" },
+  { kode: "C048", lokasi: "Rs Murni Teguh Pematang Siantar" },
+  { kode: "C049", lokasi: "Rs Murni Teguh Ciledug" },
+  { kode: "C050", lokasi: "Rs Murni Teguh Sudirman Jakarta" },
+  { kode: "C051", lokasi: "Murni Teguh Tuban Bali Hospital" },
+  { kode: "C052", lokasi: "Rs Murni Teguh Naripan Bandung" },
+  { kode: "C053", lokasi: "Rs Murni Teguh Pejaten" },
+  { kode: "C054", lokasi: "Klinik Liza Medika Jambi" },
+  { kode: "C055", lokasi: "Koperasi Mitra Husada Sidoarjo Gedung Pusat Terpadu" },
+  { kode: "C055A", lokasi: "Koperasi Mitra Husada Sidoarjo Kafe Selazzar" },
+  { kode: "C055B", lokasi: "Koperasi Mitra Husada Sidoarjo Mawar Kuning" },
+  { kode: "C055C", lokasi: "Koperasi Mitra Husada Sidoarjo Graha Delta Husada II" },
+  { kode: "C056", lokasi: "Siloam Hospitals Agora Cempaka Putih - Lobby Siloam Hospitals Agora" },
+  { kode: "C056A", lokasi: "Siloam Hospitals Agora Cempaka Putih - Depan Fo Dan Samping Ruang Tunggu Farmasi" },
+  { kode: "C056B", lokasi: "Siloam Hospitals Agora Cempaka Putih -Ruang Tunggu OPD Lt. 11" },
+  { kode: "C057", lokasi: "Siloam Hospitals Dhirga Surya Medan" },
+  { kode: "C058", lokasi: "RS Restu Kasih  Poli Umum" },
+  { kode: "C061", lokasi: "RS Betha Medika Titik Pendaftaran" },
+  { kode: "C062", lokasi: "RS Kartika Kasih Titik Lobby" },
+  { kode: "C063", lokasi: "RS Hermina Opi Jakabaring" },
+  { kode: "C064", lokasi: "RS Sumber Kasih Cirebon" },
+  { kode: "C065", lokasi: "RSUD R. Syamsudin Sukabumi - Titik Lobby Pendaftaran" },
+  { kode: "C065A", lokasi: "RSUD R. Syamsudin Sukabumi - Titik Management" },
+  { kode: "C065B", lokasi: "RSUD R. Syamsudin Sukabumi - Titik Lobby Seruni" },
+  { kode: "C066", lokasi: "RS Cinta Kasih" },
+  { kode: "C067", lokasi: "RS Universitas Andalas" },
+  { kode: "D001", lokasi: "Bandara Aji Pangeran Tumenggung Pranoto Samarinda" },
+  { kode: "D002", lokasi: "Bandara Depati Amir Pangkal Pinang" },
+  { kode: "D003", lokasi: "Bandara Sultan Syarif Kasim II Pekanbaru  Lantai 1" },
+  { kode: "D003A", lokasi: "Bandara Sultan Syarif Kasim II Pekanbaru Lantai 2" },
+  { kode: "D003B", lokasi: "Bandara Sultan Syarif Kasim II Pekanbaru Lt. Dasar (Bank BRI)" },
+  { kode: "D004", lokasi: "Bandara Supadio Pontianak Gate 3 Area Schedule Board" },
+  { kode: "D004A", lokasi: "Bandara Supadio Pontianak Gate 3 Area Landasan" },
+  { kode: "D004B", lokasi: "Bandara Supadio Pontianak Area Check In" },
+  { kode: "D005", lokasi: "Bandara Kualanamu Medan Lt.1" },
+  { kode: "D005A", lokasi: "Bandara Kualanamu Medan (Depan Money Changer)" },
+  { kode: "D005B", lokasi: "Bandara Kualanamu Medan Gate 4" },
+  { kode: "D005D", lokasi: "Bandara Kualanamu Medan Gate 8" },
+  { kode: "D005E", lokasi: "Bandara Kualanamu Medan Gate 9" },
+  { kode: "D005F", lokasi: "Bandara Kualanamu Medan Area Relink" },
+  { kode: "D005G", lokasi: "Bandara Kualanamu Medan Gate 5" },
+  { kode: "D006", lokasi: "Bandara Minangkabau Padang" },
+  { kode: "D007", lokasi: "Bandara Sultan Mahmud Badaruddin II Palembang Gate 2" },
+  { kode: "D007A", lokasi: "Bandara Sultan Mahmud Badaruddin II Palembang Area Check In" },
+  { kode: "D009", lokasi: "Bandara Adi Soemarmo Solo Lantai 3" },
+  { kode: "D009A", lokasi: "Bandara Adi Soemarmo Solo Lantai 1" },
+  { kode: "D010E", lokasi: "Bandara Syamsuddin Noor Banjarmasin Gate 1" },
+  { kode: "D010F", lokasi: "Bandara Syamsuddin Noor Banjarmasin  Bagage Claim" },
+  { kode: "D011", lokasi: "Bandara Sam Ratulangi Manado" },
+  { kode: "D014", lokasi: "Bandara Kulon Progo Yogyakarta Domestik Area Check In" },
+  { kode: "D014A", lokasi: "Bandara Kulon Progo Yogyakarta Domestik Gate 1" },
+  { kode: "D014B", lokasi: "Bandara Kulon Progo Yogyakarta Domestik Gate 2" },
+  { kode: "D014C", lokasi: "Bandara Kulon Progo Yogyakarta Domestik Gate 3" },
+  { kode: "D014D", lokasi: "Bandara Kulon Progo Yogyakarta Internasional" },
+  { kode: "D015", lokasi: "Bandara Ahmad Yani Semarang Lt. 1 (Kedatangan)" },
+  { kode: "D015A", lokasi: "Bandara Ahmad Yani Semarang Gate 1" },
+  { kode: "D015B", lokasi: "Bandara Ahmad Yani Semarang Gate 3" },
+  { kode: "D015C", lokasi: "Bandara Ahmad Yani Semarang Internasional" },
+  { kode: "D016", lokasi: "Bandara International Zainuddin Abdul Madjid Lombok Gate 2" },
+  { kode: "D016A", lokasi: "Bandara International Zainuddin Abdul Madjid Lombok Gate 3" },
+  { kode: "D017", lokasi: "Bandara Juanda Surabaya  Central Lobby  Internasional" },
+  { kode: "D017A", lokasi: "Bandara Juanda Surabaya Boarding Lounge  Internasional" },
+  { kode: "D017D", lokasi: "Bandara Juanda Surabaya Gate 10" },
+  { kode: "D017E", lokasi: "Bandara Juanda Surabaya Gate 11 Sebelah Travelator" },
+  { kode: "D017F", lokasi: "Bandara Juanda Surabaya Gate 11 Sebelah Playground" },
+  { kode: "D018", lokasi: "Bandara Ngurah Rai Bali Gate 3" },
+  { kode: "D018A", lokasi: "Bandara Ngurah Rai Bali Gate 6" },
+  { kode: "D019", lokasi: "Bandara Radin Inten II International Lampung Gate 1" },
+  { kode: "D019A", lokasi: "Bandara Radin Inten II International Lampung Gate 2" },
+  { kode: "D020", lokasi: "Bandara Pattimura Ambon" },
+  { kode: "D021", lokasi: "Bandara Sultan Aji Muhammad Sulaiman Sepinggan Balikpapan" },
+  { kode: "D021A", lokasi: "Bandara Sultan Aji Muhammad Sulaiman Sepinggan Balikpapan Gate 2" },
+  { kode: "D022", lokasi: "Bandara Hang Nadim Batam Gate A4" },
+  { kode: "D022A", lokasi: "Bandara Hang Nadim Batam Gate A5" },
+  { kode: "D022B", lokasi: "Bandara Hang Nadim Batam Gate A6" },
+  { kode: "D023", lokasi: "Bandara Sultan Iskandar Muda Aceh" },
+  { kode: "D024", lokasi: "Bandara Internasional El Tari Kupang Gate 1" },
+  { kode: "D024A", lokasi: "Bandara Internasional El Tari Kupang Gate 3" },
+  { kode: "D025", lokasi: "Bandara Fatmawati Soekarno Bengkulu" },
+  { kode: "D026", lokasi: "Bandara Internasional  Soekarno-Hatta" },
+  { kode: "F001", lokasi: "Pelabuhan ASDP Merak" },
+  { kode: "F003", lokasi: "BTPN Mega Kuningan Lt. 27" },
+  { kode: "F005", lokasi: "Pelabuhan Ulee Lheue Aceh" },
+  { kode: "F006", lokasi: "World Capital Tower" },
+  { kode: "F007", lokasi: "PT ASDP Indonesia Ferry Lombok" },
+  { kode: "F008", lokasi: "Pelabuhan PadangBai Bali Depan Loket" },
+  { kode: "F008A", lokasi: "Pelabuhan PadangBai Bali Ruang Tunggu Keberangkatan" },
+  { kode: "F010", lokasi: "ASDP Ketapang" },
+  { kode: "F011", lokasi: "Pelabuhan Gilimanuk Bali" },
+  { kode: "F012", lokasi: "Pelabuhan Balohan" },
+  { kode: "F013", lokasi: "Java Connection Bandara Yia" },
+  { kode: "F014", lokasi: "Bappeda Jawa Timur" },
+  { kode: "F015", lokasi: "Pelabuhan Bakauheni" },
+  { kode: "F016", lokasi: "PT Bima Sakti Multi Energi" },
+  { kode: "F017", lokasi: "Graha Pena Riau" },
+  { kode: "F019", lokasi: "Polygon Bike Hub" },
+  { kode: "F020", lokasi: "Pelabuhan Ajibata Area Kapal Pora-pora" },
+  { kode: "F020A", lokasi: "Pelabuhan Ajibata Area Kapal Ihan Batak" },
+  { kode: "F021", lokasi: "Pelabuhan Gili Mas" },
+  { kode: "F022", lokasi: "Pelabuhan Kedaro" },
+  { kode: "F024", lokasi: "Pelabuhan ASDP Roro Telaga Punggur" },
+  { kode: "F025", lokasi: "Bank DBS Indonesia Tower Lantai 34" },
+  { kode: "F026", lokasi: "Terminal Ferry Telaga Punggur Batam" },
+  { kode: "G005", lokasi: "Berlin Pool And Bistro Pontianak Lt. 1" },
+  { kode: "G005A", lokasi: "Berlin Pool And Bistro Pontianak Lt. 2" },
+  { kode: "G007", lokasi: "Point Coffee Hos Cokro 33 Bali Stand Alone" },
+  { kode: "G008", lokasi: "Point Coffee Gedhe Ambon" },
+  { kode: "G009", lokasi: "Point Coffee Gedhe Rest Area Km 43 Merak" },
+  { kode: "G01", lokasi: "WH Jakarta" },
+  { kode: "G012", lokasi: "Point Coffee Gedhe Manado" },
+  { kode: "G013", lokasi: "Tahu Susu Lembang" },
+  { kode: "G015", lokasi: "Joss Gandos Ketintang" },
+  { kode: "G016", lokasi: "Turbo Billiard And Cafe" },
+  { kode: "G019", lokasi: "Bandung Kunafee Pasteur" },
+  { kode: "G020", lokasi: "Nara Park Bandung" },
+  { kode: "G023", lokasi: "Jet Billiard" },
+  { kode: "G024", lokasi: "Navasari Pool & Resto" },
+  { kode: "G025", lokasi: "Concordia Lounge Domestic Lombok" },
+  { kode: "G027", lokasi: "Kentring Manik (CV Pesona Indah Nusantara)" },
+  { kode: "G028", lokasi: "Bandung Kunafe Soreang 99" },
+  { kode: "G030", lokasi: "Rosin Resto Subang Rest Area" },
+  { kode: "G032", lokasi: "One Stadium Pool & Gaming" },
+  { kode: "G033", lokasi: "The Grove North Sunter" },
+  { kode: "G034", lokasi: "One Stix Bogor Billiard & Cafe" },
+  { kode: "G035", lokasi: "Point Coffee Gedhe Rest Area Km 65A Medan" },
+  { kode: "G036", lokasi: "Kendedes Pusat Oleh Oleh Batu Malang" },
+  { kode: "G037", lokasi: "Riau Garden Pekanbaru" },
+  { kode: "G038", lokasi: "Fresh Fields" },
+  { kode: "G039", lokasi: "Warkop Udaa" },
+  { kode: "G040", lokasi: "Warung Kopi Bahagia Bersama" },
+  { kode: "G041", lokasi: "HW Livehouse QBIG BSD" },
+  { kode: "G042", lokasi: "Ninja Billiard Blok M Square" },
+  { kode: "G043", lokasi: "Bumi Aki Puncak" },
+  { kode: "H001", lokasi: "Novena Hotel" },
+  { kode: "H003", lokasi: "POP Hotel Diponegoro Surabaya" },
+  { kode: "H005", lokasi: "Starlet Hotel BSD City Tanggerang" },
+  { kode: "H006", lokasi: "The Alana Hotel Malang" },
+  { kode: "H007", lokasi: "Hotel Newton Bandung" },
+  { kode: "H008", lokasi: "Grand Jatra Hotel Pekanbaru Ballroom" },
+  { kode: "H008A", lokasi: "Grand Jatra Hotel Pekanbaru Lobby" },
+  { kode: "H009", lokasi: "Alfa Resort Hotel & Conference Puncak Bogor" },
+  { kode: "H011", lokasi: "Lorin Sentul Hotel" },
+  { kode: "H012", lokasi: "Pop Hotel Sangaji Yogyakarta" },
+  { kode: "H013", lokasi: "Surabaya Suites Hotel Area Lobby" },
+  { kode: "H013A", lokasi: "Surabaya Suites Hotel Area Pool & Gym" },
+  { kode: "H014", lokasi: "The Alana Solo" },
+  { kode: "H015", lokasi: "Aston Solo Hotel" },
+  { kode: "H016", lokasi: "Royal Safari Garden Area Lobby" },
+  { kode: "H016A", lokasi: "Royal Safari Garden Area Bamper Car" },
+  { kode: "H016B", lokasi: "Royal Safari Garden Area Komando" },
+  { kode: "H018", lokasi: "Lorin Syariah Solo Hotel" },
+  { kode: "H019", lokasi: "Dwangsa Lorin" },
+  { kode: "H023", lokasi: "Hotel Aston Bogor Area Meeting Room" },
+  { kode: "H023A", lokasi: "Hotel Aston Bogor Area Lobby" },
+  { kode: "H024", lokasi: "Aston Kemayoran City Hotel" },
+  { kode: "H025", lokasi: "Apartemen Serpong Green View" },
+  { kode: "H026", lokasi: "Atria Hotel Gading Serpong Area Lobby Hotel" },
+  { kode: "H026A", lokasi: "Atria Hotel Gading Serpong Area Lobby Grand Ballroom" },
+  { kode: "H027", lokasi: "Bobobox Pods Pancoran" },
+  { kode: "H028", lokasi: "Bobopod Juanda" },
+  { kode: "H029", lokasi: "MT Haryono Residence" },
+  { kode: "H030", lokasi: "Bobopod Dago Bandung" },
+  { kode: "H031", lokasi: "Bobobox Pods Paskal" },
+  { kode: "H032", lokasi: "Inkoppabri Cisarua Resort" },
+  { kode: "H034", lokasi: "Bobopod Kota Tua" },
+  { kode: "H035", lokasi: "Intercontinental Bali Resort" },
+  { kode: "H036", lokasi: "Ramada Suites Hotels Solo Area" },
+  { kode: "H037", lokasi: "Top Malioboro Hotel Jogya" },
+  { kode: "H038", lokasi: "Angkasa Garden Hotel Pekanbaru" },
+  { kode: "H039", lokasi: "Bobopod Kebayoran Baru" },
+  { kode: "H040", lokasi: "Bobopod Tanah Abang" },
+  { kode: "H041", lokasi: "Hotel Neo+ Kebayoran Area Lobby" },
+  { kode: "H041A", lokasi: "Hotel Neo+ Kebayoran Area Coffe Shop" },
+  { kode: "H042", lokasi: "Great Western Resort" },
+  { kode: "H043", lokasi: "Hotel Novotel Pekanbaru" },
+  { kode: "H044", lokasi: "Grand Soll Marina Hotel Tangerang" },
+  { kode: "H046", lokasi: "Bayleaf Guest House Syariah Batu" },
+  { kode: "H047", lokasi: "Grand Makmur Hotel Jambi" },
+  { kode: "H048", lokasi: "Hotel Horison Ultima Makassar" },
+  { kode: "H049", lokasi: "Bobopod Airport CBC Tangerang" },
+  { kode: "H050", lokasi: "Soll Marina Hotel Serpong" },
+  { kode: "H051", lokasi: "Aston Mojokerto Hotel & Conference Center" },
+  { kode: "H052", lokasi: "Gammara Hotel Makassar" },
+  { kode: "H053", lokasi: "Hotel Royal Bay Makassar" },
+  { kode: "H054", lokasi: "Hotel Khas Makassar" },
+  { kode: "H055", lokasi: "Whiz Prime Hotel Sudirman Makassar" },
+  { kode: "H056", lokasi: "Grand Asia Hotel Makassar" },
+  { kode: "H057", lokasi: "Grand Central Premier Hotel Medan" },
+  { kode: "H059", lokasi: "Bobopod ITC Kuningan Jakarta" },
+  { kode: "H060", lokasi: "Apartement Trimezia Beverly-Paramount Serpong" },
+  { kode: "H061", lokasi: "Shanaya Resort Malang" },
+  { kode: "H062", lokasi: "Bobobox Pods Alun Alun Bandung" },
+  { kode: "H064", lokasi: "Fame Hotel Gading Serpong" },
+  { kode: "H065", lokasi: "Front One The Andia Boyolali" },
+  { kode: "H066", lokasi: "Starlet Hotel Serpong Tangerang" },
+  { kode: "H067", lokasi: "Lrt City Sentul - Royal Sentul Park" },
+  { kode: "H068", lokasi: "Puncak Pass Resort" },
+  { kode: "H069", lokasi: "Swiss Belcourt Makassar" },
+  { kode: "H070", lokasi: "Hotel Sutha Lin Syariah Jambi" },
+  { kode: "H071", lokasi: "Grand Arjuna Hotel Bandung" },
+  { kode: "H072", lokasi: "Hotel Grandhika Setiabudi Medan" },
+  { kode: "H073", lokasi: "Hotel Crystal Inn" },
+  { kode: "H074", lokasi: "Cordia Hotel Banjarmasin" },
+  { kode: "H076", lokasi: "Sari Ater Kamboti Bandung" },
+  { kode: "H077", lokasi: "Atria Hotel Malang" },
+  { kode: "H078", lokasi: "Unhas Hotel & Convention" },
+  { kode: "H079", lokasi: "Gulala Azana Hotel & Resort Guci Tegal" },
+  { kode: "H080", lokasi: "Labersa Hotel & Convention Center Samosir" },
+  { kode: "H081", lokasi: "Grand Kanaya Hotel" },
+  { kode: "H082", lokasi: "Camp Hulu Cai Gerbang Babakan" },
+  { kode: "H083", lokasi: "Hermes Palace Hotel Aceh" },
+  { kode: "H084", lokasi: "Cityloog Hotel Tebet Titik Lobby" },
+  { kode: "H085", lokasi: "Hotel Santika Gunung Kidul" },
+  { kode: "H086", lokasi: "Fresh Hotel Sukabumi - Lobby Area" },
+  { kode: "H087", lokasi: "Balairung Hotel Jakarta Area Lobby" },
+  { kode: "J001", lokasi: "Masjid Attawun Lokasi Laki-Laki" },
+  { kode: "J001A", lokasi: "Masjid AttaAwun Lokasi Perempuan" },
+  { kode: "J002", lokasi: "Masjid Istiqlal Lokasi Al Quddus" },
+  { kode: "J002A", lokasi: "Masjid Istiqlal Lokasi Al Fattah" },
+  { kode: "J003", lokasi: "Masjid Raya Syekh Ahmad Khatib Al-Minangkabawi Lokasi Laki-Laki" },
+  { kode: "J003A", lokasi: "Masjid Raya Syekh Ahmad Khatib Al-Minangkabawi Lokasi Perempuan" },
+  { kode: "J004", lokasi: "Masjid Raya Al-Ittihad Tebet Mas" },
+  { kode: "J005", lokasi: "Masjid Al-Hakim Padang" },
+  { kode: "J006", lokasi: "Gbi Christ Cathedral" },
+  { kode: "J007", lokasi: "Masjid Raya Mujahidin Pontianak" },
+  { kode: "J008", lokasi: "Masjid Agung Kota Sukabumi" },
+  { kode: "J009", lokasi: "Masjid Agung At Taqwa Bengkulu" },
+  { kode: "J010", lokasi: "Masjid Raya Al-Insan Patal Senayan" },
+  { kode: "J011", lokasi: "Masjid Agung Nurul Ikhlas Cilegon" },
+  { kode: "J012", lokasi: "Masjid Agung Cianjur" },
+  { kode: "K001", lokasi: "Stasiun Balapan Solo" },
+  { kode: "K002", lokasi: "Stasiun Gubeng Surabaya" },
+  { kode: "K003", lokasi: "Stasiun Pasar Turi" },
+  { kode: "K004", lokasi: "Stasiun Malang Kotabaru Lantai 1" },
+  { kode: "K004A", lokasi: "Stasiun Malang Kotabaru Lantai 2" },
+  { kode: "K005", lokasi: "Stasiun Cirebon Prujakan" },
+  { kode: "K006", lokasi: "Stasiun Semarang Tawang" },
+  { kode: "K007", lokasi: "Stasiun Purwokerto" },
+  { kode: "K008", lokasi: "Stasiun Lempuyangan Yogyakarta" },
+  { kode: "K009", lokasi: "Stasiun Kejaksan Cirebon" },
+  { kode: "K010", lokasi: "Stasiun Bandung Ruang Tunggu Utara Lama" },
+  { kode: "K010A", lokasi: "Stasiun Bandung Ruang Tunggu Utara Baru" },
+  { kode: "K011", lokasi: "Stasiun Cisauk" },
+  { kode: "K013", lokasi: "Stasiun Tugu Yogyakarta" },
+  { kode: "K014", lokasi: "Stasiun Madiun" },
+  { kode: "K015", lokasi: "Stasiun Kediri" },
+  { kode: "K016", lokasi: "Stasiun Tegal" },
+  { kode: "K016A", lokasi: "Stasiun Tegal Titik Baru" },
+  { kode: "K017", lokasi: "Stasiun Jatibarang" },
+  { kode: "K018", lokasi: "Stasiun Pekalongan" },
+  { kode: "L004", lokasi: "Jagorawi Golf & Country Club Ruang Salin Laki-Laki" },
+  { kode: "L004A", lokasi: "Jagorawi Golf & Country Club Ruang Salin Perempuan" },
+  { kode: "L005", lokasi: "Suvarna Jakarta Golf Club" },
+  { kode: "L006", lokasi: "Alam Sutera Sport Center" },
+  { kode: "L008", lokasi: "Flow Padel" },
+  { kode: "L009", lokasi: "59 Hub - Fiftynine Hub" },
+  { kode: "M001", lokasi: "One Bell Park" },
+  { kode: "M003", lokasi: "Transmart Mataram Lombok" },
+  { kode: "M004", lokasi: "Bassura Mall LG & L2" },
+  { kode: "M005", lokasi: "Mall Botania Batam Lt. UG" },
+  { kode: "M005A", lokasi: "Mall Botania Batam Depan Gogo" },
+  { kode: "M006", lokasi: "Tomang Tol Plaza" },
+  { kode: "M007", lokasi: "Teras Kota Lantai 2" },
+  { kode: "M007B", lokasi: "Teras Kota Basement" },
+  { kode: "M008", lokasi: "The Park Mall Solo Lt. 1" },
+  { kode: "M008A", lokasi: "The Park Mall Solo Lt. LG" },
+  { kode: "M008B", lokasi: "The Park Mall Solo Lt.2" },
+  { kode: "M009A", lokasi: "Maspion Square Lt. UG" },
+  { kode: "M010", lokasi: "Eka Lokasari Bogor Lantai UG" },
+  { kode: "M010A", lokasi: "Eka Lokasari Bogor Lantai 2" },
+  { kode: "M010B", lokasi: "Eka Lokasari Bogor Lantai 3" },
+  { kode: "M011", lokasi: "Pamulang Square" },
+  { kode: "M011A", lokasi: "Pamulang Square Lt.Dasar" },
+  { kode: "M012", lokasi: "The Plaza Millenium Medan Lt 5" },
+  { kode: "M012A", lokasi: "The Plaza Millenium Medan Lt 3" },
+  { kode: "M014", lokasi: "Suncity Mall Sidoarjo" },
+  { kode: "M016", lokasi: "Mall Kuningan City Lt. 2" },
+  { kode: "M016A", lokasi: "Mall Kuningan City Lt. 3" },
+  { kode: "M018", lokasi: "Living World Denpasar" },
+  { kode: "M019", lokasi: "Istana Plaza Bandung Lantai LG" },
+  { kode: "M019A", lokasi: "Istana Plaza Bandung Lantai UG" },
+  { kode: "M020", lokasi: "Cirebon Super Block Mall LG-04" },
+  { kode: "M020A", lokasi: "Cirebon Super Block Mall LG-08" },
+  { kode: "M022", lokasi: "Jambi Town Square Lt Dasar" },
+  { kode: "M022A", lokasi: "Jambi Town Square Lantai 2" },
+  { kode: "M023", lokasi: "WTC Batanghari Jambi" },
+  { kode: "M024", lokasi: "Mall Balekota Tangerang Area Atrium Oetama" },
+  { kode: "M024A", lokasi: "Mall Balekota Tangerang Area Lobby Passer" },
+  { kode: "M026", lokasi: "Lippo Plaza Jambi Lt. LG" },
+  { kode: "M026A", lokasi: "Lippo Plaza Jambi Lt. 1" },
+  { kode: "M027", lokasi: "Mall Boxies 123 Lt.1" },
+  { kode: "M027A", lokasi: "Mall Boxies 123 Lt.2" },
+  { kode: "M027B", lokasi: "Mall Boxies 123 Lt.3" },
+  { kode: "M028", lokasi: "Carstensz Mall" },
+  { kode: "M029", lokasi: "Metropolis Town Square" },
+  { kode: "M030", lokasi: "Jogya City Mall Lt.1" },
+  { kode: "M030A", lokasi: "Jogya City Mall  Lt.LG" },
+  { kode: "M031", lokasi: "The King Shopping Center  Lt. LG Depan DIY" },
+  { kode: "M031A", lokasi: "The King Shopping Center  Lt. LG Gramedia" },
+  { kode: "M031B", lokasi: "The King Shopping Center  Lt. 2" },
+  { kode: "M031C", lokasi: "The King Shopping Center  Lt. 3 Selma" },
+  { kode: "M031D", lokasi: "The King Shopping Center  Lt. 3 Sport Station" },
+  { kode: "M031E", lokasi: "The King Shopping Center  Lt. 4" },
+  { kode: "M032", lokasi: "Sleman City Hall  Lt.1" },
+  { kode: "M032A", lokasi: "Sleman City Hall Lt.2" },
+  { kode: "M032B", lokasi: "Sleman City Hall Lt.2 Depan TimeZone" },
+  { kode: "M033", lokasi: "Baywalk Mall Pluit Lt. LG" },
+  { kode: "M033A", lokasi: "Baywalk Mall Pluit Lt. 1" },
+  { kode: "M034", lokasi: "Palembang Square Lt. UG" },
+  { kode: "M035", lokasi: "Lippo Plaza Jogja Lantai GF" },
+  { kode: "M035A", lokasi: "Lippo Plaza Jogja Lantai 1" },
+  { kode: "M036", lokasi: "Plaza Bintaro Jaya Banten Lt.3" },
+  { kode: "M036A", lokasi: "Plaza Bintaro Jaya Banten Lt.2" },
+  { kode: "M037", lokasi: "Mall Pekanbaru Lt Dasar" },
+  { kode: "M037A", lokasi: "Mall Pekanbaru Lt. Bassement" },
+  { kode: "M037B", lokasi: "Mall Pekanbaru Lt 1" },
+  { kode: "M037C", lokasi: "Mall Pekanbaru Lt 3" },
+  { kode: "M038", lokasi: "Mall Malioboro Yogyakarta" },
+  { kode: "M039", lokasi: "23 Paskal Shopping Center Bandung" },
+  { kode: "M040", lokasi: "OPI Mall Palembang Lt.1" },
+  { kode: "M040A", lokasi: "OPI Mall Palembang Lt.2" },
+  { kode: "M041", lokasi: "Galeria Mall Yogya Lt.1" },
+  { kode: "M041A", lokasi: "Galeria Mall Yogya Lt.3" },
+  { kode: "M042", lokasi: "Grand City Mall Surabaya Lt. LG" },
+  { kode: "M042A", lokasi: "Grand City Mall Surabaya Lt. 2" },
+  { kode: "M042B", lokasi: "Grand City Mall Surabaya Lt. 4" },
+  { kode: "M043", lokasi: "Plaza Kalibata Jakarta Lantai FF" },
+  { kode: "M045", lokasi: "Mall Bali Galeria" },
+  { kode: "M047", lokasi: "Marchand Hype Station Bintaro" },
+  { kode: "M048", lokasi: "Lombok Epicentrum Mall Lantai LG" },
+  { kode: "M048A", lokasi: "Lombok Epicentrum Mall Lantai 1 A" },
+  { kode: "M048B", lokasi: "Lombok Epicentrum Mall Lantai 1 B" },
+  { kode: "M048C", lokasi: "Lombok Epicentrum Mall Lantai GF" },
+  { kode: "M049", lokasi: "Green Pramuka Square Mall Lt. UG (Depan Playless)" },
+  { kode: "M049A", lokasi: "Green Pramuka Square Mall Lt. LG (Depan DIY)" },
+  { kode: "M049B", lokasi: "Green Pramuka Square Lt. UF ( Depan Oh Some )" },
+  { kode: "M050", lokasi: "Green Walk Mall Lt. GF" },
+  { kode: "M050A", lokasi: "Green Walk Mall Lt. 2" },
+  { kode: "M051", lokasi: "Plaza Renon Bali" },
+  { kode: "M052", lokasi: "Mall Alam Sutera Lantai 1" },
+  { kode: "M052A", lokasi: "Mall Alam Sutera Lantai 2" },
+  { kode: "M053", lokasi: "Sun Plaza Medan Depan ATM" },
+  { kode: "M053A", lokasi: "Sun Plaza Medan  Depan Gramedia" },
+  { kode: "M054", lokasi: "Java Mall Semarang Lt. 1" },
+  { kode: "M054A", lokasi: "Java Mall Semarang Lt. 3" },
+  { kode: "M055B", lokasi: "Mall SKA Pekanbaru Lantai 3" },
+  { kode: "M055C", lokasi: "Mall SKA Pekanbaru Lantai 5" },
+  { kode: "M056", lokasi: "Bandung Indah Plaza Lt 1" },
+  { kode: "M056A", lokasi: "Bandung Indah Plaza Lt 2" },
+  { kode: "M057", lokasi: "Istana BEC Bandung Lt. L3K-06" },
+  { kode: "M057A", lokasi: "Istana BEC Bandung Lt. L3A" },
+  { kode: "M058", lokasi: "Miko Mall Bandung" },
+  { kode: "M059", lokasi: "Plaza Surabaya" },
+  { kode: "M060", lokasi: "Vivo Mall Sentul" },
+  { kode: "M061", lokasi: "Cihampelas Walk Bandung Lantai 1" },
+  { kode: "M061B", lokasi: "Cihampelas Walk Lantai GF Luar" },
+  { kode: "M061C", lokasi: "Cihampelas Walk Bandung Lantai GF Dalam" },
+  { kode: "M062", lokasi: "Jambi Prima Mall" },
+  { kode: "M063", lokasi: "Citimall Dumai Lantai Dasar" },
+  { kode: "M063A", lokasi: "Citimall Dumai Lantai 2" },
+  { kode: "M064", lokasi: "Living Word Pekanbaru Lt. 2-05" },
+  { kode: "M064A", lokasi: "Living Word Pekanbaru Lt. 2-18" },
+  { kode: "M065", lokasi: "Transmart Pekanbaru Wing Kanan" },
+  { kode: "M065A", lokasi: "Transmart Pekanbaru Wing Kiri" },
+  { kode: "M067", lokasi: "Grage Mall Cirebon Lt.1" },
+  { kode: "M067A", lokasi: "Grage Mall Cirebon Lt.2" },
+  { kode: "M068", lokasi: "Transmart Pangkal Pinang Depan Ice Cream Feel" },
+  { kode: "M068A", lokasi: "Transmart Pangkal Pinang Pintu Lift" },
+  { kode: "M069", lokasi: "Transmart Padang" },
+  { kode: "M069A", lokasi: "Transmart Padang  Lt.2" },
+  { kode: "M070", lokasi: "Transmart Jambi ( Depan Kincir )" },
+  { kode: "M070A", lokasi: "Transmart Jambi (Depan Solaria)" },
+  { kode: "M071", lokasi: "Transmart Palembang" },
+  { kode: "M072", lokasi: "Palembang Indah Mall" },
+  { kode: "M073", lokasi: "Resinda Park Mall Karawang Lt. 1" },
+  { kode: "M073A", lokasi: "Resinda Park Mall Karawang Lt 2" },
+  { kode: "M073B", lokasi: "Resinda Park Mall Karawang Basement" },
+  { kode: "M074", lokasi: "Mall Ratu Indah Makassar" },
+  { kode: "M075", lokasi: "Nipah Mall Makassar" },
+  { kode: "M076", lokasi: "Mataram Mall Lantai 1" },
+  { kode: "M076A", lokasi: "Mataram Mall Lantai 2" },
+  { kode: "M077", lokasi: "Palembang Square Extension Lt.LG Depan Miniso" },
+  { kode: "M078", lokasi: "Beachwalk Shopping Center Bali" },
+  { kode: "M081", lokasi: "Transmart Lampung" },
+  { kode: "M082", lokasi: "Mall Sosoro Lt. GF" },
+  { kode: "M082A", lokasi: "Mall Sosoro Lt. 1" },
+  { kode: "M083", lokasi: "Lippo Plaza Batu Malang Lt. RF" },
+  { kode: "M083A", lokasi: "Lippo Plaza Batu Malang Lt. GF" },
+  { kode: "M086", lokasi: "Plaza Malioboro Yogya Lantai 3" },
+  { kode: "M086A", lokasi: "Plaza Malioboro Yogya Lantai LG" },
+  { kode: "M087", lokasi: "Medan Mall" },
+  { kode: "M088", lokasi: "Cambridge City Square Lantai 2  Depan Ice Skating" },
+  { kode: "M088A", lokasi: "Cambridge City Square Lantai 2 Cocoland" },
+  { kode: "M091", lokasi: "Gajah Mada Plaza Jakarta  Lt. LG" },
+  { kode: "M092", lokasi: "City Mall Cilegon" },
+  { kode: "M093", lokasi: "Bakauheni Shopping Mall Lt. GF" },
+  { kode: "M093A", lokasi: "Bakauheni Shopping Mall Lt. 1" },
+  { kode: "M094", lokasi: "Lagoon Avenue Mall Sungkono" },
+  { kode: "M095", lokasi: "Lippo Plaza Sidoarjo" },
+  { kode: "M097", lokasi: "Centre Point Medan  Lantai 3" },
+  { kode: "M097A", lokasi: "Centre Point Medan Lantai 3A" },
+  { kode: "M097B", lokasi: "Centre Point Medan Lantai 1" },
+  { kode: "M098", lokasi: "City Of Tomorrow Mall Lt. UG" },
+  { kode: "M098A", lokasi: "City Of Tomorrow Mall Lt. 1" },
+  { kode: "M101", lokasi: "Mega Mall Manado" },
+  { kode: "M102", lokasi: "Basko Grand Mall Lantai GF" },
+  { kode: "M102A", lokasi: "Basko Grand Mall Lantai 2" },
+  { kode: "M106", lokasi: "Manhattan Times Square Lantai UG" },
+  { kode: "M106A", lokasi: "Manhattan Times Square Lantai 2" },
+  { kode: "M107B", lokasi: "Singkawang Grandmall Lantai 2" },
+  { kode: "M108", lokasi: "Plaza Citra Pekanbaru Lt.2" },
+  { kode: "M108A", lokasi: "Plaza Citra Pekanbaru Lt.3" },
+  { kode: "M108B", lokasi: "Plaza Citra Pekanbaru Lt. 1" },
+  { kode: "M109", lokasi: "Plaza Indah Bogor" },
+  { kode: "M111", lokasi: "Palembang Trade Center Lantai UG" },
+  { kode: "M111A", lokasi: "Palembang Trade Center Lantai LG" },
+  { kode: "M111B", lokasi: "Palembang Trade Center Lantai M1" },
+  { kode: "M111C", lokasi: "Palembang Trade Center Lantai M2" },
+  { kode: "M111D", lokasi: "Palembang Trade Center Lantai GF (Lobby Barat)" },
+  { kode: "M111E", lokasi: "Palembang Trade Center Lantai M3" },
+  { kode: "M112", lokasi: "Ramayana Karawang" },
+  { kode: "M113", lokasi: "Pluit Village" },
+  { kode: "M114", lokasi: "Cilegon Center Mall Lantai LG" },
+  { kode: "M114A", lokasi: "Cilegon Center Mall Lantai 2" },
+  { kode: "M115", lokasi: "Nagoya Hill Mall Lantai LG (LGCN129)" },
+  { kode: "M115A", lokasi: "Nagoya Hill Mall Lantai 1 (FFCN025)" },
+  { kode: "M115B", lokasi: "Nagoya Hill Mall Lantai 2 Depan Electronic City (SFCN015)" },
+  { kode: "M115C", lokasi: "Nagoya Hill Mall Lantai 2 Depan Kidzallia (SFCN025)" },
+  { kode: "M116", lokasi: "Lippo Plaza Aceh Lt. LG" },
+  { kode: "M116A", lokasi: "Lippo Plaza Aceh Lt. GF" },
+  { kode: "M117", lokasi: "Pentacity Mall Balikpapan FF" },
+  { kode: "M117A", lokasi: "Pentacity Shopping Venue L.UG" },
+  { kode: "M118", lokasi: "E Walk Balikpapan" },
+  { kode: "M119", lokasi: "Malang Town Square Lt. UG" },
+  { kode: "M119A", lokasi: "Malang Town Square Lt. LG" },
+  { kode: "M120", lokasi: "BSD Plaza Lt. LG" },
+  { kode: "M120A", lokasi: "BSD Plaza Lt. 1" },
+  { kode: "M121", lokasi: "Duta Mall Banjarmasin LD-07" },
+  { kode: "M121A", lokasi: "Duta Mall Banjarmasin LD-08" },
+  { kode: "M121B", lokasi: "Duta Mall Banjarmasin LD-02" },
+  { kode: "M121C", lokasi: "Duta Mall Banjarmasin LD-11" },
+  { kode: "M122", lokasi: "Transmart Carrefour Maguwoharjo" },
+  { kode: "M127", lokasi: "Tangcity Mall Lantai GF" },
+  { kode: "M127A", lokasi: "Tangcity Superblock Lantai LG" },
+  { kode: "M128A", lokasi: "Botani Square Mall Bogor Lantai GF - C1 Depan A&W" },
+  { kode: "M128B", lokasi: "Botani Square Mall Bogor Lantai LG (Depan Panorama)" },
+  { kode: "M129", lokasi: "Ramayana Plaza Andalas Padang Lt. GF" },
+  { kode: "M129A", lokasi: "Ramayana Plaza Andalas Padang Lt. 4" },
+  { kode: "M130", lokasi: "Lippo Plaza Medan Lt.UG" },
+  { kode: "M130A", lokasi: "Lippo Plaza Medan Lt.1" },
+  { kode: "M132", lokasi: "Mall Cinere" },
+  { kode: "M133", lokasi: "Sukaramai Trade Center  Baru Lobby Cokro" },
+  { kode: "M133A", lokasi: "Sukaramai Trade Center  Baru Lobby Bonjol" },
+  { kode: "M133B", lokasi: "Sukaramai Trade Center  Lt.1" },
+  { kode: "M134", lokasi: "Lawu Plaza Madiun Lt. 1 Lama" },
+  { kode: "M134A", lokasi: "Lawu Plaza Madiun Lt. 1 Baru" },
+  { kode: "M135", lokasi: "Ambon City Center Lt. HDB" },
+  { kode: "M135A", lokasi: "Ambon City Center Lt GF" },
+  { kode: "M136", lokasi: "Plaza Madiun" },
+  { kode: "M136A", lokasi: "Plaza Madiun Lt.1 (Food Court)" },
+  { kode: "M137", lokasi: "Rita Supermall Tegal Lt 1" },
+  { kode: "M137A", lokasi: "Rita Supermall Tegal Lt 2" },
+  { kode: "M137B", lokasi: "Rita Supermall Tegal Lt B" },
+  { kode: "M137C", lokasi: "Rita Supermall Tegal L. UG" },
+  { kode: "M138", lokasi: "Suzuya City Mall Rantau Prapat" },
+  { kode: "M141", lokasi: "Suncity Mall Plaza Madiun" },
+  { kode: "M143", lokasi: "Mal Ciputra Seraya Lt.2 (C08 & C09)" },
+  { kode: "M143A", lokasi: "Mal Ciputra Seraya Lt.1 (C03)" },
+  { kode: "M144", lokasi: "Transmart Buah Batu Bandung" },
+  { kode: "M147", lokasi: "Citra Xperience Kemayoran" },
+  { kode: "M148", lokasi: "Aeon Mall Bsd City" },
+  { kode: "M149", lokasi: "Ramayana Kupang" },
+  { kode: "M150", lokasi: "Jatinangor Town Square Lt FF" },
+  { kode: "M150A", lokasi: "Jatinangor Town Square Lt GF" },
+  { kode: "M153", lokasi: "Basko City Mall Padang" },
+  { kode: "M153A", lokasi: "Basko City Mall Padang Lantai 1" },
+  { kode: "M154", lokasi: "Matahari Department Store Aceh" },
+  { kode: "M155", lokasi: "Phinisi Point Mall Makassar" },
+  { kode: "M156", lokasi: "Plaza Pondok Gede Bekasi" },
+  { kode: "M157", lokasi: "Royal Plaza Surabaya UG" },
+  { kode: "M157A", lokasi: "Royal Plaza Surabaya Lt.2" },
+  { kode: "M158", lokasi: "Kaza City Mall Surabaya Lt.2" },
+  { kode: "M158A", lokasi: "Kaza City Mall Surabaya Lt.3" },
+  { kode: "M160", lokasi: "Metropolitan Mall Bekasi" },
+  { kode: "M161", lokasi: "Central Plaza Lampung" },
+  { kode: "M162", lokasi: "Kediri Town Square" },
+  { kode: "M163", lokasi: "MTC Mall Panam Pekanbaru Riau  Lantai 1" },
+  { kode: "M163A", lokasi: "MTC Mall Panam Pekanbaru Riau Lantai Dasar Utara" },
+  { kode: "M163B", lokasi: "MTC Mall Panam Pekanbaru Riau Dasar Selatan" },
+  { kode: "M164", lokasi: "Plaza The Central Pekanbaru Lt. Dasar" },
+  { kode: "M164A", lokasi: "Plaza The Central Pekanbaru Lt. 1" },
+  { kode: "M164B", lokasi: "Plaza The Central Pekanbaru Lt. 2" },
+  { kode: "M167", lokasi: "Mega Mall Bengkulu" },
+  { kode: "M168", lokasi: "Grage City Mall Cirebon" },
+  { kode: "M169", lokasi: "Tamini Square" },
+  { kode: "M170", lokasi: "Mall Dinoyo City Malang Lobby" },
+  { kode: "M170A", lokasi: "Mall Dinoyo City Malang Lt.2" },
+  { kode: "M171", lokasi: "Ring Road City Walks Mall Medan Lantai 1" },
+  { kode: "M171A", lokasi: "Ring Road City Walks Mall Medan Lantai 3" },
+  { kode: "M172", lokasi: "Cibinong Mall" },
+  { kode: "M173", lokasi: "Depok Town Center" },
+  { kode: "M174", lokasi: "Matahari Duta Plaza Denpasar" },
+  { kode: "M175", lokasi: "Malang City Point" },
+  { kode: "M176", lokasi: "ITC Mega Grosir Surabaya" },
+  { kode: "M177", lokasi: "CBD Ciledug Family Mall" },
+  { kode: "M178", lokasi: "Pasar Baru Trade Center Bandung" },
+  { kode: "M179", lokasi: "Mall Pesona Square Depok" },
+  { kode: "M180", lokasi: "Ambon Manise Square" },
+  { kode: "M181", lokasi: "Cinere Bellevue Mall" },
+  { kode: "M182", lokasi: "Ujung Berung Town Square Lt 2 (Titik 1)" },
+  { kode: "M182A", lokasi: "Ujung Berung Town Square Lt  2" },
+  { kode: "M183", lokasi: "Mega Bekasi Hypermall Lt 3" },
+  { kode: "M183A", lokasi: "Mega Bekasi Hypermall Lt 2" },
+  { kode: "M183B", lokasi: "Mega Bekasi Hypermall Area Travel" },
+  { kode: "M183C", lokasi: "Mega Bekasi Hypermall Lt.GF Unit" },
+  { kode: "M184", lokasi: "Mall Paradise Walk Serpong Area Jembatan UG" },
+  { kode: "M184A", lokasi: "Mall Paradise Walk Serpong Area UG-05B" },
+  { kode: "M185", lokasi: "One Batam Mall" },
+  { kode: "M187", lokasi: "Mall Olympic Garden Malang Lt. Basement" },
+  { kode: "M187A", lokasi: "Mall Olympic Garden Malang Lt. 2" },
+  { kode: "M188", lokasi: "Gajah Mada Plaza Malang" },
+  { kode: "M189", lokasi: "Pacific Garden Square" },
+  { kode: "M190", lokasi: "Lippo Plaza Lubuklinggau Lantai LG" },
+  { kode: "M190A", lokasi: "Lippo Plaza Lubuklinggau UG" },
+  { kode: "M191", lokasi: "Supermall Karawaci" },
+  { kode: "M192", lokasi: "Suite Life Sedayu City" },
+  { kode: "M193", lokasi: "Karawang Central Plaza Fun World" },
+  { kode: "M194", lokasi: "Transmart Cipadung  Area Supermarket" },
+  { kode: "M196", lokasi: "K Square Mall Batam" },
+  { kode: "M197", lokasi: "Ramayana Samarinda Square" },
+  { kode: "M198", lokasi: "Lippo Plaza Kupang Lt. GF" },
+  { kode: "M198A", lokasi: "Lippo Plaza Kupang Lt. UG" },
+  { kode: "M199", lokasi: "Tentrem Mall Semarang" },
+  { kode: "M200", lokasi: "The Grand Outlet" },
+  { kode: "M200A", lokasi: "The Grand Outlet Lt Food Court" },
+  { kode: "M201", lokasi: "The Central Mall Gunawangsa Tidar" },
+  { kode: "M207", lokasi: "Icon Walk Banten" },
+  { kode: "M208", lokasi: "Darmo Trade Center Surabaya" },
+  { kode: "M210", lokasi: "Transmart Graha Raya" },
+  { kode: "M212", lokasi: "STS Sadang Purwakarta" },
+  { kode: "M213", lokasi: "CitiMall Cianjur 1" },
+  { kode: "M214", lokasi: "CitiMall Cianjur 2 Lt. G" },
+  { kode: "M214A", lokasi: "CitiMall Cianjur 2 Lt. 1" },
+  { kode: "M215", lokasi: "Pekanbaru Xchange Lt UG" },
+  { kode: "M215A", lokasi: "Pekanbaru Xchange Lt 2" },
+  { kode: "M216", lokasi: "DBotanica Bandung Mall" },
+  { kode: "M217", lokasi: "Buaran Plaza" },
+  { kode: "M219", lokasi: "Manhattan Urban Market Medan" },
+  { kode: "M221", lokasi: "CitiMall Garut Lt 1" },
+  { kode: "M222", lokasi: "Trans Studio Mall Bali" },
+  { kode: "M223", lokasi: "Kebayoran Park Mall" },
+  { kode: "M224", lokasi: "Blitar Square" },
+  { kode: "M225A", lokasi: "Cibinong City Mall Lt.1" },
+  { kode: "M225B", lokasi: "Cibinong City Mall Lt.UG - Tyeso" },
+  { kode: "M226", lokasi: "Mall Cijantung" },
+  { kode: "M227", lokasi: "Trans Studio Mall Bandung L3" },
+  { kode: "M227A", lokasi: "Trans Studio Mall Bandung Lantai 2" },
+  { kode: "M228", lokasi: "Citimall Lahat LG" },
+  { kode: "M230", lokasi: "Plaza Kalibata (EFATA GRASIA)" },
+  { kode: "M231", lokasi: "Plaza Medan Fair" },
+  { kode: "M232", lokasi: "Ramayana Cilegon" },
+  { kode: "M233", lokasi: "Pacific Mall Tegal" },
+  { kode: "M234", lokasi: "Ciplaz Garut" },
+  { kode: "M236", lokasi: "Living World Alam Sutera" },
+  { kode: "M237", lokasi: "Suzuya Tanjung Morawa" },
+  { kode: "M238", lokasi: "Linggajati Plaza" },
+  { kode: "M240", lokasi: "The Grove Alam Sutera" },
+  { kode: "M241", lokasi: "Trans Studio Mall Makassar" },
+  { kode: "M242", lokasi: "Sun East Mall Banyuwangi" },
+  { kode: "M243", lokasi: "Mall Mandau City" },
+  { kode: "M244", lokasi: "Social Market Palembang Lantai 1" },
+  { kode: "M244A", lokasi: "Social Market Palembang Lantai 2" },
+  { kode: "M245", lokasi: "Mall Ciputra Semarang" },
+  { kode: "M246", lokasi: "Kediri Mall" },
+  { kode: "M247", lokasi: "Balubur Town Square Lantai 1 (Depan Hokben)" },
+  { kode: "M247A", lokasi: "Balubur Town Square Lantai 2" },
+  { kode: "M248", lokasi: "Suzuya Merdeka Mall L2" },
+  { kode: "M249", lokasi: "Suzuya Mall Rantau Prapat" },
+  { kode: "M250", lokasi: "Siantar City Square" },
+  { kode: "M251", lokasi: "Festival Citylink Bandung" },
+  { kode: "M252", lokasi: "Lampung City Mall" },
+  { kode: "M253", lokasi: "Ramayana Makassar Town Square" },
+  { kode: "M254", lokasi: "Plaza Parahyangan" },
+  { kode: "M255", lokasi: "Sukaregang Leather Centre" },
+  { kode: "M256", lokasi: "Mega Trade Centre Megamas" },
+  { kode: "M257", lokasi: "Tanjungpinang City Center" },
+  { kode: "M259", lokasi: "Dhoho Plaza Kediri Pintu Selatan" },
+  { kode: "M260", lokasi: "Mall Cikampek" },
+  { kode: "M261", lokasi: "Mega Mall Batam Centre" },
+  { kode: "M262", lokasi: "Mall Batam City Square" },
+  { kode: "M263", lokasi: "Mall Matahari Daan Mogot" },
+  { kode: "M264", lokasi: "Lippo Plaza Keboen Raya Bogor" },
+  { kode: "M265", lokasi: "Lamongan Plaza" },
+  { kode: "M266", lokasi: "Ponorogo City Center" },
+  { kode: "M269", lokasi: "Depok Town Square" },
+  { kode: "M270", lokasi: "Mall Artha Gading" },
+  { kode: "M272", lokasi: "Citiplaza Bondowoso" },
+  { kode: "M273", lokasi: "Itc Roxy  Mas" },
+  { kode: "M274", lokasi: "Bencoolen Mall Bengkulu" },
+  { kode: "M275", lokasi: "Plaza Bukit Tinggi" },
+  { kode: "M276", lokasi: "Bekasi Trade Center" },
+  { kode: "M277", lokasi: "A.S.S Mall Brebes" },
+  { kode: "M278", lokasi: "Discovery Mall Bali" },
+  { kode: "M279", lokasi: "It Center Manado" },
+  { kode: "M280", lokasi: "Ramayana Pontianak" },
+  { kode: "M281", lokasi: "One District At Puri" },
+  { kode: "M282", lokasi: "Palur Plaza Karanganyar" },
+  { kode: "M283", lokasi: "The Galeria Mall Banjarmasin" },
+  { kode: "M284", lokasi: "Mall Of Bengkinang Lt. Dasar" },
+  { kode: "M284A", lokasi: "Mall Of Bengkinang Lt. 1" },
+  { kode: "M285", lokasi: "The East Batam" },
+  { kode: "M287", lokasi: "Trans Studio Mall Cibubur" },
+  { kode: "M288", lokasi: "Bigmall Samarinda Lantai  2 Depan XXI" },
+  { kode: "M288A", lokasi: "Bigmall Samarinda Lantai G Depan Kidzoona" },
+  { kode: "M289", lokasi: "BT BATIK TRUSMI" },
+  { kode: "M290", lokasi: "Mutiara Cahaya Slawi" },
+  { kode: "M291", lokasi: "Plaza Araya" },
+  { kode: "M292", lokasi: "Tomang Tol Plaza Kalimalang" },
+  { kode: "P001", lokasi: "Yogya Mekar Wangi" },
+  { kode: "P002", lokasi: "Yogya Lembang" },
+  { kode: "P003", lokasi: "Yogya Bojong Soang Bandung" },
+  { kode: "P004", lokasi: "Yogya Sumbersari Junction" },
+  { kode: "P005", lokasi: "Yogya Ciranjang Cianjur" },
+  { kode: "P009", lokasi: "Swalayan Maju Bersama Denai" },
+  { kode: "P010", lokasi: "Swalayan Maju Bersama Katamso" },
+  { kode: "P017", lokasi: "Indogrosir Malang" },
+  { kode: "P018", lokasi: "Artasedana Sanur" },
+  { kode: "P019", lokasi: "Artasedana Sesetan" },
+  { kode: "P020", lokasi: "Artasedana Ngurah Rai Singaraja" },
+  { kode: "P021", lokasi: "Artasedana Surapati" },
+  { kode: "P022", lokasi: "Indogrosir Jambi" },
+  { kode: "P023", lokasi: "Alfamart Rest Area KM 43 Merak" },
+  { kode: "P024", lokasi: "Alfamart Rest Area KM 19B-2 Bekasi" },
+  { kode: "P025", lokasi: "Alfamart Rest Area KM 45A Bogor" },
+  { kode: "P026", lokasi: "Alfamart Rest Area KM 45A-2 Bogor" },
+  { kode: "P027", lokasi: "Artasedana Amlapura" },
+  { kode: "P028", lokasi: "Alfamart Raya Kartini Cirebon" },
+  { kode: "P029", lokasi: "Alfamart Rest Area KM 833B Purbolinggo" },
+  { kode: "P030", lokasi: "Alfamart Rest Area KM 819A Pasuruan" },
+  { kode: "P031", lokasi: "Alfamart Rest Area KM 792B Pasuruan" },
+  { kode: "P032", lokasi: "Mutiara Cahaya Mejasem" },
+  { kode: "P033", lokasi: "Alfamart Diponegoro" },
+  { kode: "P034", lokasi: "Lotte Grosir Jatake" },
+  { kode: "P035", lokasi: "Alfamart Rest Area KM 39A-2 Cikampek" },
+  { kode: "P037", lokasi: "Alfamart Rest Area KM 626B-1 Madiun" },
+  { kode: "P038", lokasi: "Alfamart Rest Area KM 575A Ngawi" },
+  { kode: "P039", lokasi: "Alfamart Rest Area KM 208B Cirebon" },
+  { kode: "P043", lokasi: "Alfamart Rest Area KM 26-1 Sidoarjo" },
+  { kode: "P046", lokasi: "Toserba Yogya Tegal" },
+  { kode: "P048", lokasi: "Yogya Riau Junction Bandung" },
+  { kode: "P049", lokasi: "Toserba Yogya Heritage" },
+  { kode: "P050", lokasi: "Toserba Yogya Slawi" },
+  { kode: "P053", lokasi: "Indogrosir Bogor" },
+  { kode: "P055", lokasi: "Naga Swalayan Cikarang" },
+  { kode: "P056", lokasi: "Indogrosir Cikokol" },
+  { kode: "P057", lokasi: "Griya Batununggal Bandung" },
+  { kode: "P058", lokasi: "Toserba Yogya Garut" },
+  { kode: "P059", lokasi: "Arta Sedana Negara" },
+  { kode: "P060", lokasi: "Hypermart Cyberpark Karawaci Lku" },
+  { kode: "P061", lokasi: "Swalayan Goori Demak" },
+  { kode: "P062", lokasi: "Swalayan Goori Gunung Pati" },
+  { kode: "P063", lokasi: "Swalayan Goori Karangjati" },
+  { kode: "P064", lokasi: "Swalayan Goori Jatisari" },
+  { kode: "P065", lokasi: "Swalayan Goori Ngaliyan" },
+  { kode: "P066", lokasi: "Hypermart Metro Trade Center (Metro Indah Mall Bandung)" },
+  { kode: "P067", lokasi: "Hypermart Puri Indah" },
+  { kode: "P068", lokasi: "Hypermart Daan Mogot" },
+  { kode: "P069", lokasi: "Hypermart Lippo Cikarang" },
+  { kode: "P070", lokasi: "Hyfresh Cikarang Festival" },
+  { kode: "P071", lokasi: "Hyfresh Supermarket Bojong Sari Sawangan" },
+  { kode: "P072", lokasi: "Hypermart Pesona Square Depok" },
+  { kode: "P073", lokasi: "Hypermart Metropolis Tanggerang" },
+  { kode: "P074", lokasi: "Hypermart Mega Mall Batam Centre" },
+  { kode: "P075", lokasi: "Indomaret Fresh Cihampelas 149" },
+  { kode: "P076", lokasi: "Indomaret Fresh Dago 166" },
+  { kode: "P077", lokasi: "Indomaret Fresh Surya Sumantri" },
+  { kode: "P078", lokasi: "Indomaret Point Braga" },
+  { kode: "P079", lokasi: "Tropi Mart & Tropi Toko Buku Sijenjang" },
+  { kode: "P080", lokasi: "Graha Mulia Probolinggo" },
+  { kode: "P081", lokasi: "Graha Mulia Toserba Lumajang" },
+  { kode: "Q001", lokasi: "PAM Event External" },
+  { kode: "R001", lokasi: "Rest Area Km97 Cipularang Lorong Samping" },
+  { kode: "R001A", lokasi: "Rest Area Km97 Cipularang Lobby Belakang" },
+  { kode: "R002", lokasi: "Rest Area 260B Brebes" },
+  { kode: "R004", lokasi: "Rest Area KM88 A" },
+  { kode: "R004A", lokasi: "Rest Area KM88 B" },
+  { kode: "R005", lokasi: "Rest Area KM 116A Lampung" },
+  { kode: "R006", lokasi: "Rest Area KM 116B Lampung" },
+  { kode: "S004", lokasi: "Honda Thamrin Jambi" },
+  { kode: "S005", lokasi: "Autokool Cirebon" },
+  { kode: "S006", lokasi: "Auto 2000 Pramuka" },
+  { kode: "S007", lokasi: "Auto 2000 Cempaka Putih" },
+  { kode: "S008", lokasi: "Agung Toyota Jambi Pall 10" },
+  { kode: "S009", lokasi: "Agung Toyota Teluk Kuantan" },
+  { kode: "T001", lokasi: "Platinum Cinema Magelang" },
+  { kode: "T003", lokasi: "Platinum Cineplex Citimall Lahat" },
+  { kode: "T004", lokasi: "Platinum Cineplex Solo" },
+  { kode: "T007", lokasi: "Platinum Cineplex Cibitung" },
+  { kode: "U001", lokasi: "Binus Square Hall" },
+  { kode: "U004", lokasi: "Ma'Had Aisyah Binti Abu Bakar Li Al-Dakwah" },
+  { kode: "U005", lokasi: "Universitas Muhammadiyah Jambi" },
+];
+</script>
+<body>
+
+<div class="banner-wrap">
+  <img src="data:image/webp;base64,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" alt="Perfect Relax by Perfect Health" class="banner-img" />
+<div class="banner-text">
+    <span class="banner-title">PERFECT RELAX</span>
+    <span class="banner-sub">Form Claim Staff Operasional</span>
+  </div>
+</div>
+
+<header class="header">
+  <div>
+    <h1 class="title" id="pageTitle">Klaim reimbursement staff</h1>
+  </div>
+  <div id="headerRight"></div>
+</header>
+
+<div class="layout">
+  <div id="staffView" class="staff-layout">
+    <form id="claimForm" class="form-card">
+      <div class="form-header-row">
+        <h2 class="form-title">Formulir klaim baru</h2>
+        <span class="auto-badge" id="autoDateBadge"></span>
+      </div>
+      <p class="form-sub">Tanggal upload tercatat otomatis saat klaim dikirim.</p>
+
+      <div class="field">
+        <label>1. Nama lengkap</label>
+        <input id="f_nama" placeholder="" autocomplete="off" />
+        <div class="error-text hidden" id="err_nama">Wajib diisi</div>
+      </div>
+
+      <div class="field">
+        <label>2. Kategori claim</label>
+        <select id="f_kategori">
+          <option value="">Pilih kategori</option>
+        </select>
+        <div class="error-text hidden" id="err_kategori">Pilih kategori</div>
+      </div>
+
+      <div class="field">
+        <label>3. Kode outlet / titik lokasi</label>
+        <input id="f_outletQuery" placeholder="Cari kode outlet atau nama lokasi..." autocomplete="off" />
+        <div id="outletSuggestBox" class="suggest-box hidden"></div>
+        <div class="error-text hidden" id="err_outlet">Pilih outlet dari daftar</div>
+      </div>
+
+      <div class="field">
+        <label>4. Titik lokasi</label>
+        <div class="readonly-box placeholder" id="f_titikLokasiDisplay">Terisi otomatis setelah memilih outlet</div>
+      </div>
+
+      <div class="field">
+        <label>5. Tanggal nota</label>
+        <input type="date" id="f_tanggalNota" />
+        <div class="error-text hidden" id="err_tanggalNota">Wajib diisi</div>
+      </div>
+
+      <div class="field">
+        <label>6. Nominal claim</label>
+        <div class="rp-wrap">
+          <span class="rp-prefix">Rp</span>
+          <input type="number" min="0" id="f_nominal" placeholder="0" />
+        </div>
+        <div class="error-text hidden" id="err_nominal">Masukkan nominal yang valid</div>
+      </div>
+
+      <div class="field">
+        <label>7. Upload nota</label>
+        <div id="uploadArea">
+          <label class="upload-box" id="uploadBoxLabel">
+            <input type="file" id="f_nota" accept="image/*" class="hidden" />
+            <span>&#128247;</span>
+            <span id="uploadBoxText">Ambil / pilih foto nota</span>
+          </label>
+        </div>
+        <div class="error-text hidden" id="err_nota">Unggah foto nota</div>
+      </div>
+
+      <div class="field">
+        <label>8. Keterangan (opsional)</label>
+        <input id="f_keterangan" placeholder="Catatan tambahan, contoh: BBM lembur" autocomplete="off" />
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">
+        <span id="submitBtnText">Kirim klaim</span>
+      </button>
+
+      <div id="toastBox"></div>
+    </form>
+  </div>
+
+  <div id="adminView" class="ledger-card hidden">
+    <div class="ledger-header-row">
+      <h2 class="form-title">Riwayat klaim</h2>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input type="text" class="filter-select" id="filterNama" placeholder="Cari nama..." style="width:150px;" />
+        <select class="filter-select" id="filterKategori">
+          <option value="">Semua kategori</option>
+        </select>
+        <select class="filter-select" id="sortBy">
+          <option value="terbaru">Urutkan: Terbaru</option>
+          <option value="nama">Urutkan: Nama (A-Z)</option>
+        </select>
+        <button type="button" class="export-btn" id="exportBtn">&#128190; Export Excel</button>
+        <button type="button" class="export-btn" id="syncSheetBtn">&#128260; Muat data dari Google Sheets</button>
+        <button type="button" class="export-btn" id="exportPhotoBtn">&#128248; Export Foto Nota</button>
+      </div>
+    </div>
+    <div class="stub" id="stubRow"></div>
+    <div id="tableArea"></div>
+  </div>
+</div>
+
+<div id="pinOverlay" class="overlay hidden">
+  <div class="pin-card">
+    <h2 class="form-title">Masuk sebagai admin</h2>
+    <p class="form-sub">Masukkan PIN admin untuk melihat riwayat klaim dan export data.</p>
+    <input type="password" inputmode="numeric" id="pinInput" placeholder="Masukkan PIN" />
+    <div class="error-text hidden" id="pinError">PIN salah, coba lagi</div>
+    <button type="button" class="submit-btn" id="pinSubmitBtn" style="margin-top:12px;">Masuk</button>
+  </div>
+</div>
+
+<div id="previewOverlay" class="overlay hidden">
+  <img id="previewImg" class="preview-img" src="" alt="Pratinjau nota" />
+  <button class="preview-close" id="previewCloseBtn">&times;</button>
+</div>
+
+<script>
+const KATEGORI = [
+  { label: "BBM", color: "#BA7517", bg: "#FAEEDA" },
+  { label: "Transportasi Umum", color: "#185FA5", bg: "#E6F1FB" },
+  { label: "Parkir", color: "#534AB7", bg: "#EEEDFE" },
+  { label: "ATK", color: "#3B6D11", bg: "#EAF3DE" },
+  { label: "Perlengkapan Display", color: "#993556", bg: "#FBEAF0" },
+  { label: "Biaya Ongkir", color: "#0F6E56", bg: "#E1F5EE" },
+];
+
+const ADMIN_PIN = "279900";
+const STORAGE_KEY = "reimburse_entries_v1";
+
+/* Tempel URL Web App Apps Script kamu di sini setelah deploy (Langkah 4).
+   Kalau dikosongkan, data tetap tersimpan lokal di browser saja (tidak tergabung). */
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbz6-T9FyAKSVwNN-BRaGhjCarUXes8d-Ml0YjPLMJDnbwEdUNlFeh3RwvsZApklPgVt/exec";
+
+/* Tempel URL "Publish to web" (format CSV) dari Google Sheets kamu di sini.
+   File -> Share -> Publish to web -> pilih sheet -> CSV -> Publish -> copy link. */
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSZF8lQI8BwKO-n9lvf7cTBLSRgLBxL0-u0yJkMp0fGLSqAsWINTNWCJnkL52cDROK6xivVHHeVjFqa/pub?gid=672332227&single=true&output=csv";
+
+/* ===== state ===== */
+let entries = loadEntries();
+let form = { namaLengkap:"", kategori:"", outletQuery:"", titikLokasi:"", kodeOutlet:"", tanggalNota:"", nominal:"", notaBukti:"", notaNamaFile:"", keterangan:"" };
+let view = "staff";
+let filterKategori = "";
+let filterNama = "";
+let sortBy = "terbaru";
+
+/* ===== helpers ===== */
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function formatTanggal(iso){
+  if(!iso) return "-";
+  const d = new Date(iso);
+  return d.toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+}
+function formatTimestamp(iso){
+  if(!iso) return "-";
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+function formatRupiah(n){ return "Rp " + (Number(n)||0).toLocaleString("id-ID"); }
+function outletLabel(o){ return o.kode + " \u2014 " + o.lokasi; }
+function kategoriMeta(label){ return KATEGORI.find(k=>k.label===label) || {color:"#5B6B68", bg:"#F1EFE8"}; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function loadEntries(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ console.error("Gagal memuat data", e); return []; }
+}
+function saveEntries(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    return true;
+  }catch(e){
+    console.error("Gagal menyimpan data", e);
+    return false;
+  }
+}
+
+function showToast(msg, isError){
+  const box = document.getElementById("toastBox");
+  box.innerHTML = `<div class="toast ${isError?'err':''}">${esc(msg)}</div>`;
+  setTimeout(()=>{ box.innerHTML=""; }, 2500);
+}
+
+function compressImage(file, maxDim, quality){
+  maxDim = maxDim || 1100; quality = quality || 0.72;
+  return new Promise((resolve, reject) => {
+    if(!file.type.startsWith("image/")){ reject(new Error("File harus berupa gambar (JPG/PNG)")); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width, height = img.height;
+        if(width > maxDim || height > maxDim){
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width*scale); height = Math.round(height*scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Gagal membaca gambar"));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error("Gagal membaca file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ===== init static UI ===== */
+function initSelects(){
+  const kSel = document.getElementById("f_kategori");
+  const fSel = document.getElementById("filterKategori");
+  KATEGORI.forEach(k=>{
+    const o1 = document.createElement("option"); o1.value = k.label; o1.textContent = k.label; kSel.appendChild(o1);
+    const o2 = document.createElement("option"); o2.value = k.label; o2.textContent = k.label; fSel.appendChild(o2);
+  });
+}
+
+function renderHeaderRight(){
+  const el = document.getElementById("headerRight");
+  document.getElementById("pageTitle").textContent = view === "admin" ? "Dashboard admin reimbursement" : "Klaim reimbursement staff";
+  if(view === "admin"){
+    el.innerHTML = `
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="header-stat">
+          <span class="header-stat-label">Total klaim tercatat</span>
+          <span class="header-stat-value">${entries.length}</span>
+        </div>
+        <button type="button" class="btn-outline danger" id="exitAdminBtn">&#8592; Keluar admin</button>
+      </div>`;
+    document.getElementById("exitAdminBtn").onclick = () => { view = "staff"; render(); };
+  } else {
+    el.innerHTML = `<button type="button" class="btn-outline" id="adminLinkBtn">&#128274; Masuk admin</button>`;
+    document.getElementById("adminLinkBtn").onclick = () => {
+      document.getElementById("pinOverlay").classList.remove("hidden");
+      document.getElementById("pinInput").value = "";
+      document.getElementById("pinError").classList.add("hidden");
+      document.getElementById("pinInput").focus();
+    };
+  }
+}
+
+function render(){
+  document.getElementById("staffView").classList.toggle("hidden", view !== "staff");
+  document.getElementById("adminView").classList.toggle("hidden", view !== "admin");
+  renderHeaderRight();
+  if(view === "admin") renderLedger();
+}
+
+/* ===== outlet autocomplete ===== */
+function renderOutletSuggestions(){
+  const q = form.outletQuery.trim().toLowerCase();
+  const box = document.getElementById("outletSuggestBox");
+  if(!q){ box.classList.add("hidden"); box.innerHTML=""; return; }
+  const matches = OUTLETS.filter(o => o.kode.toLowerCase().includes(q) || o.lokasi.toLowerCase().includes(q)).slice(0,8);
+  if(matches.length === 0){
+    box.innerHTML = `<div class="suggest-empty">Outlet tidak ditemukan</div>`;
+    box.classList.remove("hidden");
+    return;
+  }
+  box.innerHTML = matches.map(o => `
+    <div class="suggest-item" data-kode="${esc(o.kode)}">
+      <span class="suggest-kode">${esc(o.kode)}</span>
+      <span class="suggest-lokasi">${esc(o.lokasi)}</span>
+    </div>`).join("");
+  box.classList.remove("hidden");
+  box.querySelectorAll(".suggest-item").forEach(item=>{
+    item.addEventListener("mousedown", () => {
+      const kode = item.getAttribute("data-kode");
+      const o = OUTLETS.find(x => x.kode === kode);
+      if(!o) return;
+      form.outletQuery = outletLabel(o);
+      form.kodeOutlet = o.kode;
+      form.titikLokasi = o.lokasi;
+      document.getElementById("f_outletQuery").value = form.outletQuery;
+      updateTitikLokasiDisplay();
+      box.classList.add("hidden");
+    });
+  });
+}
+function updateTitikLokasiDisplay(){
+  const el = document.getElementById("f_titikLokasiDisplay");
+  if(form.titikLokasi){
+    el.textContent = form.titikLokasi;
+    el.classList.remove("placeholder");
+  } else {
+    el.textContent = "Terisi otomatis setelah memilih outlet";
+    el.classList.add("placeholder");
+  }
+}
+
+/* ===== nota upload ===== */
+function renderNotaArea(){
+  const area = document.getElementById("uploadArea");
+  if(form.notaBukti){
+    area.innerHTML = `
+      <div class="nota-preview-row">
+        <img src="${form.notaBukti}" class="nota-thumb" alt="Pratinjau nota" />
+        <div style="flex:1; min-width:0;">
+          <p class="nota-filename">${esc(form.notaNamaFile)}</p>
+          <button type="button" class="nota-remove" id="removeNotaBtn">&times; Ganti foto</button>
+        </div>
+      </div>`;
+    document.getElementById("removeNotaBtn").onclick = () => {
+      form.notaBukti = ""; form.notaNamaFile = "";
+      renderNotaArea();
+    };
+  } else {
+    area.innerHTML = `
+      <label class="upload-box" id="uploadBoxLabel">
+        <input type="file" id="f_nota" accept="image/*" class="hidden" />
+        <span>&#128247;</span>
+        <span id="uploadBoxText">Ambil / pilih foto nota</span>
+      </label>`;
+    document.getElementById("f_nota").addEventListener("change", handleNotaChange);
+  }
+}
+async function handleNotaChange(ev){
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  document.getElementById("uploadBoxText").textContent = "Mengunggah...";
+  try{
+    const dataUrl = await compressImage(file);
+    form.notaBukti = dataUrl;
+    form.notaNamaFile = file.name;
+    document.getElementById("err_nota").classList.add("hidden");
+    renderNotaArea();
+  }catch(err){
+    console.error(err);
+    showToast(err.message || "Gagal mengunggah foto nota", true);
+    renderNotaArea();
+  }
+}
+
+/* ===== validation + submit ===== */
+function validate(){
+  const errors = {};
+  if(!form.namaLengkap.trim()) errors.nama = true;
+  if(!form.kategori) errors.kategori = true;
+  if(!form.kodeOutlet || !form.titikLokasi) errors.outlet = true;
+  if(!form.tanggalNota) errors.tanggalNota = true;
+  if(!form.nominal || Number(form.nominal) <= 0) errors.nominal = true;
+  if(!form.notaBukti) errors.nota = true;
+
+  document.getElementById("err_nama").classList.toggle("hidden", !errors.nama);
+  document.getElementById("err_kategori").classList.toggle("hidden", !errors.kategori);
+  document.getElementById("err_outlet").classList.toggle("hidden", !errors.outlet);
+  document.getElementById("err_tanggalNota").classList.toggle("hidden", !errors.tanggalNota);
+  document.getElementById("err_nominal").classList.toggle("hidden", !errors.nominal);
+  document.getElementById("err_nota").classList.toggle("hidden", !errors.nota);
+
+  const errorCount = Object.keys(errors).length;
+  if(errorCount > 0){
+    const labels = {
+      nama: "Nama lengkap", kategori: "Kategori claim", outlet: "Kode outlet / titik lokasi (pilih dari daftar saran)",
+      tanggalNota: "Tanggal nota", nominal: "Nominal claim", nota: "Upload nota"
+    };
+    const missing = Object.keys(errors).map(k => labels[k]).join(", ");
+    showToast("Belum bisa dikirim, lengkapi dulu: " + missing, true);
+    const firstErrKey = Object.keys(errors)[0];
+    const firstErrEl = document.getElementById("err_" + firstErrKey);
+    if(firstErrEl) firstErrEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  return errorCount === 0;
+}
+
+function resetForm(){
+  form = { namaLengkap:"", kategori:"", outletQuery:"", titikLokasi:"", kodeOutlet:"", tanggalNota:"", nominal:"", notaBukti:"", notaNamaFile:"", keterangan:"" };
+  document.getElementById("f_nama").value = "";
+  document.getElementById("f_kategori").value = "";
+  document.getElementById("f_outletQuery").value = "";
+  document.getElementById("f_tanggalNota").value = "";
+  document.getElementById("f_nominal").value = "";
+  document.getElementById("f_keterangan").value = "";
+  updateTitikLokasiDisplay();
+  renderNotaArea();
+  ["err_nama","err_kategori","err_outlet","err_tanggalNota","err_nominal","err_nota"].forEach(id=>{
+    document.getElementById(id).classList.add("hidden");
+  });
+}
+
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i], next = text[i+1];
+    if(inQuotes){
+      if(c === '"' && next === '"'){ field += '"'; i++; }
+      else if(c === '"'){ inQuotes = false; }
+      else { field += c; }
+    } else {
+      if(c === '"'){ inQuotes = true; }
+      else if(c === ','){ row.push(field); field = ""; }
+      else if(c === '\r'){ /* ignore */ }
+      else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ""; }
+      else { field += c; }
+    }
+  }
+  if(field.length > 0 || row.length > 0){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ""));
+}
+
+function parseNominal(str){
+  if(!str) return 0;
+  const cleaned = String(str).replace(/[^0-9.-]/g, "");
+  return Number(cleaned) || 0;
+}
+
+async function handleLoadFromSheet(){
+  if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
+    showToast("URL Google Sheets belum diatur, hubungi pembuat aplikasi", true);
+    return;
+  }
+  const btn = document.getElementById("syncSheetBtn");
+  const originalText = btn.innerHTML;
+  btn.innerHTML = "Memuat...";
+  btn.disabled = true;
+  try{
+    const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
+    if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
+    const text = await res.text();
+    const rows = parseCSV(text);
+    if(rows.length < 2){ showToast("Data di Google Sheets kosong", true); return; }
+
+    const header = rows[0].map(h => h.trim().toLowerCase());
+    const idx = {
+      timestamp: header.findIndex(h => h.includes("timestamp")),
+      nota: header.findIndex(h => h.includes("nota claim")),
+      nama: header.findIndex(h => h.includes("nama lengkap")),
+      kategori: header.findIndex(h => h.includes("kategori")),
+      lokasi: header.findIndex(h => h.includes("titik lokasi")),
+      tanggalNota: header.findIndex(h => h.includes("tanggal nota")),
+      nominal: header.findIndex(h => h.includes("nominal")),
+      keterangan: header.findIndex(h => h.includes("keterangan")),
+      outlet: header.findIndex(h => h.includes("kode outlet")),
+    };
+
+    const loaded = rows.slice(1)
+      .filter(r => r.some(cell => cell && cell.trim() !== ""))
+      .map((r, i) => {
+        const timestampRaw = idx.timestamp >= 0 ? r[idx.timestamp] : "";
+        const tanggalUpload = timestampRaw ? timestampRaw.split(" ")[0] : "";
+        return {
+          id: "sheet-" + i + "-" + (timestampRaw || i),
+          tanggalUpload: tanggalUpload,
+          createdAt: timestampRaw ? timestampRaw.replace(" ", "T") : "",
+          namaLengkap: idx.nama >= 0 ? r[idx.nama] : "",
+          kategori: idx.kategori >= 0 ? r[idx.kategori] : "",
+          titikLokasi: idx.lokasi >= 0 ? r[idx.lokasi] : "",
+          kodeOutlet: idx.outlet >= 0 ? r[idx.outlet] : "",
+          tanggalNota: idx.tanggalNota >= 0 ? r[idx.tanggalNota] : "",
+          nominal: idx.nominal >= 0 ? parseNominal(r[idx.nominal]) : 0,
+          notaBukti: "",
+          notaNamaFile: idx.nota >= 0 ? r[idx.nota] : "",
+          keterangan: idx.keterangan >= 0 ? r[idx.keterangan] : "",
+        };
+      });
+
+    entries = loaded;
+    renderLedger();
+    renderHeaderRight();
+    showToast("Berhasil memuat " + loaded.length + " klaim dari Google Sheets (semua staff)");
+  }catch(err){
+    console.error(err);
+    showToast("Gagal memuat dari Google Sheets: " + err.message, true);
+  }finally{
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+
+function syncToSheet(record){
+  if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")) return;
+  const payload = {
+    timestamp: formatTimestamp(record.createdAt),
+    notaBukti: record.notaBukti,
+    notaNamaFile: record.notaNamaFile,
+    namaLengkap: record.namaLengkap,
+    kategori: record.kategori,
+    titikLokasi: record.titikLokasi,
+    tanggalNota: record.tanggalNota,
+    nominal: record.nominal,
+    keterangan: record.keterangan,
+    kodeOutlet: record.kodeOutlet,
+  };
+  /* mode:no-cors + Content-Type text/plain supaya tidak kena preflight OPTIONS,
+     karena Apps Script tidak menangani preflight dengan baik. Respons tidak bisa
+     dibaca (opaque), jadi kita anggap terkirim optimistically. */
+  fetch(WEBAPP_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload),
+  }).catch(err => console.error("Gagal sinkron ke Google Sheets:", err));
+}
+
+function handleSubmit(ev){
+  ev.preventDefault();
+  if(!validate()) return;
+
+  const btn = document.getElementById("submitBtn");
+  const btnText = document.getElementById("submitBtnText");
+  btn.disabled = true;
+  btnText.textContent = "Mengunggah...";
+
+  try{
+    const id = "reimburse-" + Date.now() + "-" + Math.random().toString(36).slice(2,8);
+    const nowIso = new Date().toISOString();
+    const record = {
+      id,
+      tanggalUpload: todayISO(),
+      namaLengkap: form.namaLengkap.trim(),
+      kategori: form.kategori,
+      titikLokasi: form.titikLokasi,
+      kodeOutlet: form.kodeOutlet,
+      tanggalNota: form.tanggalNota,
+      nominal: Number(form.nominal),
+      notaBukti: form.notaBukti,
+      notaNamaFile: form.notaNamaFile,
+      keterangan: form.keterangan.trim(),
+      createdAt: nowIso,
+    };
+
+    setTimeout(()=>{
+      try{
+        entries.unshift(record);
+        const ok = saveEntries();
+        syncToSheet(record);
+        btn.disabled = false;
+        btnText.textContent = "Kirim klaim";
+        if(ok){
+          resetForm();
+          showToast("Klaim berhasil disimpan");
+        } else {
+          entries.shift();
+          showToast("Gagal menyimpan klaim, coba lagi", true);
+        }
+      }catch(innerErr){
+        console.error("Error saat menyimpan klaim:", innerErr);
+        btn.disabled = false;
+        btnText.textContent = "Kirim klaim";
+        showToast("Terjadi kesalahan: " + innerErr.message, true);
+      }
+    }, 200);
+  }catch(err){
+    console.error("Error saat menyiapkan klaim:", err);
+    btn.disabled = false;
+    btnText.textContent = "Kirim klaim";
+    showToast("Terjadi kesalahan: " + err.message, true);
+  }
+}
+
+
+/* ===== admin dashboard ===== */
+function getFiltered(){
+  let list = filterKategori ? entries.filter(e => e.kategori === filterKategori) : entries;
+  if(filterNama.trim()){
+    const q = filterNama.trim().toLowerCase();
+    list = list.filter(e => (e.namaLengkap || "").toLowerCase().includes(q));
+  }
+  list = [...list];
+  if(sortBy === "nama"){
+    list.sort((a, b) => (a.namaLengkap || "").localeCompare(b.namaLengkap || ""));
+  } else {
+    list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  }
+  return list;
+}
+function renderLedger(){
+  const filtered = getFiltered();
+  const total = filtered.reduce((s,e)=> s + (Number(e.nominal)||0), 0);
+
+  const stub = document.getElementById("stubRow");
+  stub.innerHTML = Array.from({length:40}).map(()=>'<span class="stub-dot"></span>').join("");
+
+  const area = document.getElementById("tableArea");
+  if(filtered.length === 0){
+    area.innerHTML = `<p class="empty-state">Belum ada klaim tercatat.</p>`;
+    return;
+  }
+
+  let rows = filtered.map((e,idx)=>{
+    const meta = kategoriMeta(e.kategori);
+    return `
+    <tr style="background:${idx%2===0?'#FFFFFF':'#F7F6F2'}">
+      <td>${formatTanggal(e.tanggalUpload)}</td>
+      <td style="font-weight:500">${esc(e.namaLengkap)}</td>
+      <td><span class="chip" style="color:${meta.color}; background:${meta.bg}">${esc(e.kategori)}</span></td>
+      <td>${esc(e.titikLokasi)}</td>
+      <td><span class="outlet-badge">${esc(e.kodeOutlet)}</span></td>
+      <td>${formatTanggal(e.tanggalNota)}</td>
+      <td style="text-align:right; font-family:'IBM Plex Mono',monospace;">${formatRupiah(e.nominal)}</td>
+      <td>${e.notaBukti ? `<img src="${e.notaBukti}" class="nota-thumb-small" data-preview="${e.id}" />` : '<span style="color:#A6A79C; font-size:12px;">-</span>'}</td>
+      <td style="text-align:right;"><button class="delete-btn" data-delete="${e.id}">&#128465;</button></td>
+    </tr>`;
+  }).join("");
+
+  area.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Tgl upload</th><th>Nama</th><th>Kategori</th><th>Lokasi</th><th>Outlet</th>
+          <th>Tgl nota</th><th style="text-align:right;">Nominal</th><th>Nota</th><th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td colspan="6" class="total-label">Total</td>
+          <td class="total-value" style="text-align:right;">${formatRupiah(total)}</td>
+          <td></td><td></td>
+        </tr></tfoot>
+      </table>
+    </div>`;
+
+  area.querySelectorAll("[data-preview]").forEach(img=>{
+    img.addEventListener("click", ()=>{
+      const e = entries.find(x=>x.id === img.getAttribute("data-preview"));
+      if(e){
+        document.getElementById("previewImg").src = e.notaBukti;
+        document.getElementById("previewOverlay").classList.remove("hidden");
+      }
+    });
+  });
+  area.querySelectorAll("[data-delete]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-delete");
+      entries = entries.filter(e=>e.id !== id);
+      saveEntries();
+      renderLedger();
+      renderHeaderRight();
+    });
+  });
+}
+
+function handleExport(){
+  const filtered = getFiltered();
+  if(filtered.length === 0){ showToast("Tidak ada data untuk diekspor", true); return; }
+  const rows = filtered.map(e => ({
+    "Timestamp": formatTimestamp(e.createdAt),
+    "Nota Claim": e.notaNamaFile ? "Lihat di aplikasi (" + e.notaNamaFile + ")" : "-",
+    "Nama Lengkap": e.namaLengkap,
+    "Kategori Claim": e.kategori,
+    "Titik Lokasi Sesuai Dashboard": e.titikLokasi,
+    "Tanggal Nota Claim": e.tanggalNota,
+    "Nominal Claim": Number(e.nominal)||0,
+    "Keterangan Lain Lain ( Opsional )": e.keterangan || "",
+    "Kode Outlet": e.kodeOutlet,
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [{wch:20},{wch:26},{wch:22},{wch:20},{wch:30},{wch:16},{wch:16},{wch:28},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  const sheetName = filterKategori ? filterKategori.slice(0,31) : "Reimbursement";
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const stamp = todayISO();
+  const suffix = (filterKategori ? "-" + filterKategori.replace(/\s+/g,"") : "") + (filterNama.trim() ? "-" + filterNama.trim().replace(/\s+/g,"") : "");
+  XLSX.writeFile(wb, `reimbursement-staff-${stamp}${suffix}.xlsx`);
+  showToast("File Excel sedang diunduh");
+}
+
+const CATEGORY_EXPORT_ORDER = ["BBM", "Transportasi Umum", "Parkir", "Perlengkapan Display", "ATK", "Biaya Ongkir"];
+const CM_TO_PX = 37.7952755906;
+const IMG_HEIGHT_PX = Math.round(8 * CM_TO_PX);     // 8 cm
+const IMG_WIDTH_PX = Math.round(6.57 * CM_TO_PX);   // 6.57 cm
+const ROW_HEIGHT_PX = 20; // perkiraan tinggi baris default Excel (15pt)
+
+function sortEntriesForPhotoExport(list){
+  return [...list].sort((a, b) => {
+    if(a.kategori === "Parkir" && b.kategori === "Parkir"){
+      const kodeCmp = (a.kodeOutlet || "").localeCompare(b.kodeOutlet || "");
+      if(kodeCmp !== 0) return kodeCmp;
+    }
+    return (a.titikLokasi || "").localeCompare(b.titikLokasi || "");
+  });
+}
+
+async function handleExportPhoto(){
+  const filtered = getFiltered();
+  if(filtered.length === 0){ showToast("Tidak ada data untuk diekspor", true); return; }
+  if(typeof ExcelJS === "undefined"){ showToast("Library ExcelJS gagal dimuat, cek koneksi internet", true); return; }
+
+  const btn = document.getElementById("exportPhotoBtn");
+  const originalText = btn.innerHTML;
+  btn.innerHTML = "Menyiapkan file...";
+  btn.disabled = true;
+
+  try{
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Lampiran Nota");
+    sheet.getColumn(1).width = 34;
+    sheet.getColumn(2).width = 26;
+    sheet.getColumn(3).width = 16;
+    sheet.getColumn(4).width = 16;
+
+    let r = 1; // baris ExcelJS 1-based
+
+    for(const kategori of CATEGORY_EXPORT_ORDER){
+      const group = sortEntriesForPhotoExport(filtered.filter(e => e.kategori === kategori));
+      if(group.length === 0) continue;
+
+      const meta = kategoriMeta(kategori);
+      const headerRow = sheet.getRow(r);
+      headerRow.getCell(1).value = kategori.toUpperCase() + " (" + group.length + " klaim)";
+      sheet.mergeCells(r, 1, r, 4);
+      headerRow.getCell(1).font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+      headerRow.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E56A0" } };
+      headerRow.height = 22;
+      r += 1;
+
+      for(const e of group){
+        const infoRow = sheet.getRow(r);
+        infoRow.getCell(1).value = "Nama: " + e.namaLengkap;
+        infoRow.getCell(2).value = (e.kodeOutlet ? e.kodeOutlet + " - " : "") + e.titikLokasi;
+        infoRow.getCell(3).value = "Nota: " + formatTanggal(e.tanggalNota);
+        infoRow.getCell(4).value = formatRupiah(e.nominal);
+        infoRow.font = { size: 10.5 };
+        infoRow.height = 18;
+        r += 1;
+
+        if(e.notaBukti){
+          try{
+            const base64 = e.notaBukti.split(",")[1];
+            const ext = e.notaBukti.includes("image/png") ? "png" : "jpeg";
+            const imageId = workbook.addImage({ base64, extension: ext });
+            sheet.addImage(imageId, {
+              tl: { col: 0, row: r - 1 },
+              ext: { width: IMG_WIDTH_PX, height: IMG_HEIGHT_PX },
+            });
+          }catch(imgErr){
+            console.error("Gagal menyisipkan gambar untuk", e.namaLengkap, imgErr);
+          }
+          const imageRows = Math.ceil(IMG_HEIGHT_PX / ROW_HEIGHT_PX);
+          r += imageRows;
+        }
+        r += 1; // baris spasi antar klaim
+      }
+      r += 1; // baris spasi antar kategori
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = todayISO();
+    const suffix = (filterKategori ? "-" + filterKategori.replace(/\s+/g,"") : "") + (filterNama.trim() ? "-" + filterNama.trim().replace(/\s+/g,"") : "");
+    a.href = url;
+    a.download = `reimbursement-foto-nota-${stamp}${suffix}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("File Excel dengan foto sedang diunduh");
+  }catch(err){
+    console.error(err);
+    showToast("Gagal membuat file, coba lagi", true);
+  }finally{
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+
+/* ===== wire up events ===== */
+function initEvents(){
+  document.getElementById("f_nama").addEventListener("input", e=>{ form.namaLengkap = e.target.value; });
+  document.getElementById("f_kategori").addEventListener("change", e=>{ form.kategori = e.target.value; });
+  document.getElementById("f_tanggalNota").addEventListener("change", e=>{ form.tanggalNota = e.target.value; });
+  document.getElementById("f_nominal").addEventListener("input", e=>{ form.nominal = e.target.value; });
+  document.getElementById("f_keterangan").addEventListener("input", e=>{ form.keterangan = e.target.value; });
+
+  const outletInput = document.getElementById("f_outletQuery");
+  outletInput.addEventListener("input", e=>{
+    form.outletQuery = e.target.value; form.kodeOutlet = ""; form.titikLokasi = "";
+    updateTitikLokasiDisplay();
+    renderOutletSuggestions();
+  });
+  outletInput.addEventListener("focus", renderOutletSuggestions);
+  outletInput.addEventListener("blur", ()=> setTimeout(()=>{
+    document.getElementById("outletSuggestBox").classList.add("hidden");
+  }, 150));
+
+  document.getElementById("claimForm").addEventListener("submit", handleSubmit);
+  document.getElementById("f_nota").addEventListener("change", handleNotaChange);
+
+  document.getElementById("filterKategori").addEventListener("change", e=>{
+    filterKategori = e.target.value; renderLedger();
+  });
+  document.getElementById("filterNama").addEventListener("input", e=>{
+    filterNama = e.target.value; renderLedger();
+  });
+  document.getElementById("sortBy").addEventListener("change", e=>{
+    sortBy = e.target.value; renderLedger();
+  });
+  document.getElementById("exportBtn").addEventListener("click", handleExport);
+  document.getElementById("exportPhotoBtn").addEventListener("click", handleExportPhoto);
+  document.getElementById("syncSheetBtn").addEventListener("click", handleLoadFromSheet);
+
+  document.getElementById("pinSubmitBtn").addEventListener("click", tryPinLogin);
+  document.getElementById("pinInput").addEventListener("keydown", e=>{ if(e.key === "Enter") tryPinLogin(); });
+  document.getElementById("pinOverlay").addEventListener("click", e=>{
+    if(e.target.id === "pinOverlay") document.getElementById("pinOverlay").classList.add("hidden");
+  });
+
+  document.getElementById("previewOverlay").addEventListener("click", ()=>{
+    document.getElementById("previewOverlay").classList.add("hidden");
+  });
+  document.getElementById("previewImg").addEventListener("click", e=> e.stopPropagation());
+  document.getElementById("previewCloseBtn").addEventListener("click", ()=>{
+    document.getElementById("previewOverlay").classList.add("hidden");
+  });
+}
+function tryPinLogin(){
+  const val = document.getElementById("pinInput").value.trim();
+  if(val === ADMIN_PIN){
+    document.getElementById("pinOverlay").classList.add("hidden");
+    view = "admin";
+    render();
+  } else {
+    document.getElementById("pinError").classList.remove("hidden");
+  }
+}
+
+/* ===== boot ===== */
+function boot(){
+  initSelects();
+  initEvents();
+  document.getElementById("autoDateBadge").textContent = "\uD83D\uDCC5 " + formatTanggal(todayISO());
+  render();
+}
+boot();
+</script>
+</body>
+</html>
