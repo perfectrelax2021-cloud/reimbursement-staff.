@@ -1298,20 +1298,32 @@ async function handleLoadFromSheet(){
     const rows = parseCSV(text);
     if(rows.length < 2){ showToast("Data di Google Sheets kosong", true); return; }
 
-    const header = rows[0].map(h => h.trim().toLowerCase());
-    const idx = {
-      timestamp: header.findIndex(h => h.includes("timestamp")),
-      nota: header.findIndex(h => h.includes("nota claim")),
-      nama: header.findIndex(h => h.includes("nama lengkap")),
-      kategori: header.findIndex(h => h.includes("kategori")),
-      lokasi: header.findIndex(h => h.includes("titik lokasi")),
-      tanggalNota: header.findIndex(h => h.includes("tanggal nota")),
-      nominal: header.findIndex(h => h.includes("nominal")),
-      keterangan: header.findIndex(h => h.includes("keterangan")),
-      outlet: header.findIndex(h => h.includes("kode outlet")),
-    };
+   let headerRowIdx = rows.findIndex(r =>
+  r.some(cell => cell.trim().toLowerCase().includes("nama lengkap")) &&
+  r.some(cell => cell.trim().toLowerCase().includes("timestamp"))
+);
+    
+if(headerRowIdx === -1) headerRowIdx = 0; // fallback kalau tidak ketemu, anggap baris pertama
 
-    const loaded = rows.slice(1)
+const header = rows[headerRowIdx].map(h => h.trim().toLowerCase());
+const idx = {
+  timestamp: header.findIndex(h => h.includes("timestamp")),
+  nota: header.findIndex(h => h.includes("nota claim")),
+  nama: header.findIndex(h => h.includes("nama lengkap")),
+  kategori: header.findIndex(h => h.includes("kategori")),
+  lokasi: header.findIndex(h => h.includes("titik lokasi")),
+  tanggalNota: header.findIndex(h => h.includes("tanggal nota")),
+  nominal: header.findIndex(h => h.includes("nominal")),
+  keterangan: header.findIndex(h => h.includes("keterangan")),
+  outlet: header.findIndex(h => h.includes("kode outlet")),
+};
+
+if(idx.nama === -1 || idx.timestamp === -1){
+  showToast("Format kolom di Google Sheets tidak dikenali, hubungi pembuat aplikasi", true);
+  return;
+}
+
+    const loaded = rows.slice(headerRowIdx + 1)
       .filter(r => r.some(cell => cell && cell.trim() !== ""))
       .map((r, i) => {
         const timestampRaw = idx.timestamp >= 0 ? r[idx.timestamp] : "";
