@@ -1278,7 +1278,7 @@ function parseCSV(text){
 
 function parseNominal(str){
   if(!str) return 0;
-  const cleaned = String(str).replace(/[^0-9.-]/g, "");
+  const cleaned = String(str).replace(/[^0-9]/g, "");
   return Number(cleaned) || 0;
 }
 
@@ -1326,23 +1326,26 @@ if(idx.nama === -1 || idx.timestamp === -1){
     const loaded = rows.slice(headerRowIdx + 1)
       .filter(r => r.some(cell => cell && cell.trim() !== ""))
       .map((r, i) => {
-        const timestampRaw = idx.timestamp >= 0 ? r[idx.timestamp] : "";
-        const tanggalUpload = timestampRaw ? timestampRaw.split(" ")[0] : "";
-        return {
-          id: "sheet-" + i + "-" + (timestampRaw || i),
-          tanggalUpload: tanggalUpload,
-          createdAt: timestampRaw ? timestampRaw.replace(" ", "T") : "",
-          namaLengkap: idx.nama >= 0 ? r[idx.nama] : "",
-          kategori: idx.kategori >= 0 ? r[idx.kategori] : "",
-          titikLokasi: idx.lokasi >= 0 ? r[idx.lokasi] : "",
-          kodeOutlet: idx.outlet >= 0 ? r[idx.outlet] : "",
-          tanggalNota: idx.tanggalNota >= 0 ? r[idx.tanggalNota] : "",
-          nominal: idx.nominal >= 0 ? parseNominal(r[idx.nominal]) : 0,
-          notaBukti: "",
-          notaNamaFile: idx.nota >= 0 ? r[idx.nota] : "",
-          keterangan: idx.keterangan >= 0 ? r[idx.keterangan] : "",
-        };
-      });
+       const timestampRaw = idx.timestamp >= 0 ? (r[idx.timestamp] || "").trim() : "";
+    const tanggalUpload = timestampRaw ? timestampRaw.split(" ")[0] : "";
+   const notaRaw = idx.nota >= 0 ? (r[idx.nota] || "").trim() : "";
+   const driveIdMatch = notaRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
+   const notaImageUrl = driveIdMatch ? `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w1200` : "";
+   return {
+  id: "sheet-" + i + "-" + (timestampRaw || i),
+  tanggalUpload: tanggalUpload,
+  createdAt: timestampRaw ? timestampRaw.replace(" ", "T") : "",
+  namaLengkap: idx.nama >= 0 ? (r[idx.nama] || "").trim() : "",
+  kategori: idx.kategori >= 0 ? (r[idx.kategori] || "").trim() : "",
+  titikLokasi: idx.lokasi >= 0 ? (r[idx.lokasi] || "").trim() : "",
+  kodeOutlet: idx.outlet >= 0 ? (r[idx.outlet] || "").trim() : "",
+  tanggalNota: idx.tanggalNota >= 0 ? (r[idx.tanggalNota] || "").trim() : "",
+  nominal: idx.nominal >= 0 ? parseNominal(r[idx.nominal]) : 0,
+  notaBukti: notaImageUrl,
+  notaNamaFile: notaRaw,
+  keterangan: idx.keterangan >= 0 ? (r[idx.keterangan] || "").trim() : "",
+   };
+  });
 
     entries = loaded;
     renderLedger();
@@ -1559,7 +1562,18 @@ function sortEntriesForPhotoExport(list){
     return (a.titikLokasi || "").localeCompare(b.titikLokasi || "");
   });
 }
-
+  
+async function urlToBase64(url){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("Gagal mengambil gambar dari " + url);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 async function handleExportPhoto(){
   const filtered = getFiltered();
   if(filtered.length === 0){ showToast("Tidak ada data untuk diekspor", true); return; }
@@ -1605,13 +1619,13 @@ async function handleExportPhoto(){
 
         if(e.notaBukti){
           try{
-            const base64 = e.notaBukti.split(",")[1];
-            const ext = e.notaBukti.includes("image/png") ? "png" : "jpeg";
-            const imageId = workbook.addImage({ base64, extension: ext });
-            sheet.addImage(imageId, {
-              tl: { col: 0, row: r - 1 },
-              ext: { width: IMG_WIDTH_PX, height: IMG_HEIGHT_PX },
-            });
+           let dataUrl = e.notaBukti;
+        if(dataUrl.startsWith("http")){
+       dataUrl = await urlToBase64(dataUrl);
+     }
+      const base64 = dataUrl.split(",")[1];
+     const ext = dataUrl.includes("image/png") ? "png" : "jpeg";
+     const imageId = workbook.addImage({ base64, extension: ext });
           }catch(imgErr){
             console.error("Gagal menyisipkan gambar untuk", e.namaLengkap, imgErr);
           }
