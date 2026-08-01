@@ -920,7 +920,8 @@ const OUTLETS = [
         </select>
         <button type="button" class="export-btn" id="exportBtn">&#128190; Export Excel</button>
         <button type="button" class="export-btn" id="syncSheetBtn">&#128260; Muat data dari Google Sheets</button>
-        <button type="button" class="export-btn" id="exportPhotoBtn">&#128248; Export Foto Nota</button>
+        <button type="button" class="export-btn" id="exportPhotoBtn">&#128248; Export Foto Nota (lokal)</button>
+        <button type="button" class="export-btn" id="exportPhotoServerBtn">&#9729; Export Foto Nota (semua staff)</button>
       </div>
     </div>
     <div class="stub" id="stubRow"></div>
@@ -1728,6 +1729,7 @@ function initEvents(){
   });
   document.getElementById("exportBtn").addEventListener("click", handleExport);
   document.getElementById("exportPhotoBtn").addEventListener("click", handleExportPhoto);
+  document.getElementById("exportPhotoServerBtn").addEventListener("click", handleExportPhotoServer);
   document.getElementById("syncSheetBtn").addEventListener("click", handleLoadFromSheet);
 
   document.getElementById("pinSubmitBtn").addEventListener("click", tryPinLogin);
