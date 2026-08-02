@@ -1035,9 +1035,24 @@ function saveEntries(){
 }
 
 function showToast(msg, isError){
-  const box = document.getElementById("toastBox");
-  box.innerHTML = `<div class="toast ${isError?'err':''}">${esc(msg)}</div>`;
-  setTimeout(()=>{ box.innerHTML=""; }, 2500);
+  const existing = document.getElementById("centerToast");
+  if(existing) existing.remove();
+ 
+  const el = document.createElement("div");
+  el.id = "centerToast";
+  el.className = "center-toast" + (isError ? " err" : "");
+  el.innerHTML = `
+    <div class="center-toast-icon">${isError ? "&#10060;" : "&#9989;"}</div>
+    <div class="center-toast-msg">${esc(msg)}</div>
+  `;
+  document.body.appendChild(el);
+ 
+  requestAnimationFrame(() => el.classList.add("show"));
+ 
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 250);
+  }, 2200);
 }
 
 function compressImage(file, maxDim, quality){
