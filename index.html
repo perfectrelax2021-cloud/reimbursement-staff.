@@ -1601,7 +1601,28 @@ async function urlToBase64(url){
     reader.readAsDataURL(blob);
   });
 }
-async function handleExportPhoto(){
+async function handleExportPhotoServer(){
+  if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")){
+    showToast("URL Apps Script belum diatur, hubungi pembuat aplikasi", true);
+    return;
+  }
+  const btn = document.getElementById("exportPhotoServerBtn");
+  const originalText = btn.innerHTML;
+  btn.innerHTML = "Memproses di Google Sheets...";
+  btn.disabled = true;
+  try{
+    const res = await fetch(WEBAPP_URL + "?action=exportPhotos&t=" + Date.now());
+    const json = await res.json();
+    if(json.status !== "ok") throw new Error(json.message || "Gagal memproses");
+    showToast("Berhasil! " + json.count + " klaim tersusun di tab 'Export Foto Nota' di Google Sheets kamu");
+  }catch(err){
+    console.error(err);
+    showToast("Gagal memproses: " + err.message, true);
+  }finally{
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}async function handleExportPhoto(){
   const filtered = getFiltered();
   if(filtered.length === 0){ showToast("Tidak ada data untuk diekspor", true); return; }
   if(typeof ExcelJS === "undefined"){ showToast("Library ExcelJS gagal dimuat, cek koneksi internet", true); return; }
