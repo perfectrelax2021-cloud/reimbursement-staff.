@@ -1418,7 +1418,6 @@ async function showMyHistory(){
     sub.textContent = "Gagal memuat riwayat: " + err.message;
    }
   }
-  
 async function handleLoadFromSheet(){
   if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
     showToast("URL Google Sheets belum diatur, hubungi pembuat aplikasi", true);
