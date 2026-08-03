@@ -1342,7 +1342,81 @@ function parseNominal(str){
   const cleaned = String(str).replace(/[^0-9]/g, "");
   return Number(cleaned) || 0;
 }
+async function showMyHistory(){
+  const nama = form.namaLengkap.trim();
+  const overlay = document.getElementById("myHistoryOverlay");
+  const title = document.getElementById("myHistoryTitle");
+  const sub = document.getElementById("myHistorySub");
+  const list = document.getElementById("myHistoryList");
 
+  if(!nama || !STAFF.some(s => s.nama === nama)){
+    showToast("Pilih nama kamu dulu di kolom 1 sebelum lihat riwayat", true);
+    return;
+  }
+
+  title.textContent = "Riwayat klaim: " + nama;
+  sub.textContent = "Memuat...";
+  list.innerHTML = "";
+  overlay.classList.remove("hidden");
+
+  if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
+    sub.textContent = "Fitur belum diatur, hubungi admin";
+    return;
+  }
+
+  try{
+    const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
+    if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
+    const text = await res.text();
+    const rows = parseCSV(text);
+
+    let headerRowIdx = rows.findIndex(r =>
+      r.some(cell => cell.trim().toLowerCase().includes("nama lengkap")) &&
+      r.some(cell => cell.trim().toLowerCase().includes("timestamp"))
+    );
+    if(headerRowIdx === -1) headerRowIdx = 0;
+
+    const header = rows[headerRowIdx].map(h => h.trim().toLowerCase());
+    const idx = {
+      timestamp: header.findIndex(h => h.includes("timestamp")),
+      nama: header.findIndex(h => h.includes("nama lengkap")),
+      kategori: header.findIndex(h => h.includes("kategori")),
+      lokasi: header.findIndex(h => h.includes("titik lokasi")),
+      tanggalNota: header.findIndex(h => h.includes("tanggal nota")),
+      nominal: header.findIndex(h => h.includes("nominal")),
+      outlet: header.findIndex(h => h.includes("kode outlet")),
+    };
+
+    const mine = rows.slice(headerRowIdx + 1)
+      .filter(r => r.some(cell => cell && cell.trim() !== "") && idx.nama >= 0 && (r[idx.nama] || "").trim() === nama)
+      .sort((a, b) => (b[idx.timestamp] || "").localeCompare(a[idx.timestamp] || ""));
+
+    if(mine.length === 0){
+      sub.textContent = "Belum ada klaim tercatat atas nama kamu.";
+      return;
+    }
+
+    sub.textContent = mine.length + " klaim ditemukan (data dari Google Sheets, mungkin ada jeda beberapa menit setelah kirim).";
+    list.innerHTML = mine.map(r => {
+      const meta = kategoriMeta(idx.kategori >= 0 ? r[idx.kategori] : "");
+      const tglUpload = idx.timestamp >= 0 ? (r[idx.timestamp] || "").split(" ")[0] : "-";
+      const lokasi = idx.lokasi >= 0 ? r[idx.lokasi] : "";
+      const outlet = idx.outlet >= 0 ? r[idx.outlet] : "";
+      const nominal = idx.nominal >= 0 ? formatRupiah(parseNominal(r[idx.nominal])) : "-";
+      return `
+        <div style="border-bottom:1px solid #E7EEF6; padding:10px 0;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="chip" style="color:${meta.color}; background:${meta.bg};">${esc(idx.kategori>=0?r[idx.kategori]:"")}</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-weight:600; color:#1E56A0;">${nominal}</span>
+          </div>
+          <div style="font-size:12.5px; color:#3A4A63; margin-top:4px;">${esc(lokasi)}${outlet ? " ("+esc(outlet)+")" : ""}</div>
+          <div style="font-size:11.5px; color:#66748C; margin-top:2px;">Diupload: ${esc(tglUpload)}</div>
+        </div>`;
+    }).join("");
+  }catch(err){
+    console.error(err);
+    sub.textContent = "Gagal memuat riwayat: " + err.message;
+  }
 async function handleLoadFromSheet(){
   if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
     showToast("URL Google Sheets belum diatur, hubungi pembuat aplikasi", true);
