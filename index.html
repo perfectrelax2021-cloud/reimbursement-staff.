@@ -952,7 +952,18 @@ const OUTLETS = [
   <button class="preview-close" id="previewCloseBtn">&times;</button>
 </div>
 
-<script>
+<div id="myHistoryOverlay" class="overlay hidden">
+  <div class="pin-card" style="width: 420px; max-width: 92vw; max-height: 80vh; display: flex; flex-direction: column;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+      <h2 class="form-title" id="myHistoryTitle">Riwayat klaim saya</h2>
+      <button type="button" id="myHistoryCloseBtn" style="border:none; background:transparent; font-size:20px; cursor:pointer; color:#66748C;">&times;</button>
+    </div>
+    <p class="form-sub" id="myHistorySub">Memuat...</p>
+    <div id="myHistoryList" style="overflow-y:auto; flex:1;"></div>
+  </div>
+</div>
+  
+  <script>
 const KATEGORI = [
   { label: "BBM", color: "#BA7517", bg: "#FAEEDA" },
   { label: "Transportasi Umum", color: "#185FA5", bg: "#E6F1FB" },
@@ -1788,6 +1799,13 @@ function initEvents(){
   });
   document.getElementById("previewImg").addEventListener("click", e=> e.stopPropagation());
   document.getElementById("previewCloseBtn").addEventListener("click", ()=>{
+    document.getElementById("myHistoryBtn").addEventListener("click", showMyHistory);
+document.getElementById("myHistoryCloseBtn").addEventListener("click", ()=>{
+  document.getElementById("myHistoryOverlay").classList.add("hidden");
+});
+document.getElementById("myHistoryOverlay").addEventListener("click", e=>{
+  if(e.target.id === "myHistoryOverlay") document.getElementById("myHistoryOverlay").classList.add("hidden");
+});
     document.getElementById("previewOverlay").classList.add("hidden");
   });
 }
