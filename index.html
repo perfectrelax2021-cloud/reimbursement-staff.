@@ -1423,7 +1423,9 @@ async function handleLoadFromSheet(){
   if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
     showToast("URL Google Sheets belum diatur, hubungi pembuat aplikasi", true);
     return;
+   }
   }
+  
   const btn = document.getElementById("syncSheetBtn");
   const originalText = btn.innerHTML;
   btn.innerHTML = "Memuat...";
