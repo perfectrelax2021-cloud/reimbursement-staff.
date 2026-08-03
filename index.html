@@ -155,6 +155,7 @@ const STAFF = [
   { nama: "Putri Rahayu", nik: "PR780" },
   { nama: "Diki (Tes Admin)", nik: "DKI" },
   { nama: "Kiki Hidayat", nik: "KKI" },
+  { nama: "M Soleh", nik: "PR477" },
 ];
 
 const OUTLETS = [
@@ -811,7 +812,7 @@ const OUTLETS = [
   { kode: "K01", lokasi: "Survey Lokasi" },
   { kode: "D008", lokasi: "Bandara Sultan Thaha Jambi" },
   { kode: "L010", lokasi: "Klub Raya Bogor" },
-
+  { kode: "C067", lokasi: "RS Universitas Andalas" },
 ];
 </script>
 <body>
@@ -844,7 +845,7 @@ const OUTLETS = [
         <label>1. Nama lengkap</label>
         <input id="f_nama" placeholder="Ketik nama staff..." autocomplete="off" />
         <div id="namaSuggestBox" class="suggest-box hidden"></div>
-        <div class="error-text hidden" id="err_nama">Wajib diisi</div>
+        <div class="error-text hidden" id="err_nama">Wajib pilih nama dari daftar saran</div>
       </div>
 
       <div class="field">
@@ -1252,7 +1253,8 @@ async function handleNotaChange(ev){
 /* ===== validation + submit ===== */
 function validate(){
   const errors = {};
-  if(!form.namaLengkap.trim()) errors.nama = true;
+  const namaMatch = STAFF.some(s => s.nama === form.namaLengkap.trim());
+  if(!form.namaLengkap.trim() || !namaMatch) errors.nama = true;
   if(!form.kategori) errors.kategori = true;
   if(!CATEGORIES_WITHOUT_OUTLET.includes(form.kategori) && (!form.kodeOutlet || !form.titikLokasi)) errors.outlet = true;
   if(!form.tanggalNota) errors.tanggalNota = true;
