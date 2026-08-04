@@ -21,6 +21,7 @@ const STAFF = [
   { nama: "Afief Maulana", nik: "PR 434" },
   { nama: "Ahmad Alfianor", nik: "PR028" },
   { nama: "Ahmad Anwar Rukmana", nik: "A2966" },
+  { nama: "Alfandi Ritonga", nik: "PR276" },
   { nama: "Alfarid Akbar Prasetyo", nik: "PR212" },
   { nama: "Andi Antonio", nik: "PR356" },
   { nama: "Antonius Egor", nik: "PR156" },
@@ -848,10 +849,7 @@ const OUTLETS = [
         <input id="f_nama" placeholder="Ketik nama staff..." autocomplete="off" />
         <div id="namaSuggestBox" class="suggest-box hidden"></div>
         <div class="error-text hidden" id="err_nama">Wajib pilih nama dari daftar saran</div>
-        <button type="button" id="myHistoryBtn" class="btn-outline" style="margin-top:8px; width:100%; justify-content:center;">
-        &#128203; Lihat riwayat saya
-        </button>  
-       </div>
+      </div>
 
       <div class="field">
         <label>2. Kategori claim</label>
@@ -948,22 +946,12 @@ const OUTLETS = [
   </div>
 </div>
 
-<div id="preview  Overlay" class="overlay hidden">
+<div id="previewOverlay" class="overlay hidden">
   <img id="previewImg" class="preview-img" src="" alt="Pratinjau nota" />
   <button class="preview-close" id="previewCloseBtn">&times;</button>
 </div>
 
-<div id="myHistoryOverlay" class="overlay hidden">
-  <div class="pin-card" style="width: 420px; max-width: 92vw; max-height: 80vh; display: flex; flex-direction: column;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-      <h2 class="form-title" id="myHistoryTitle">Riwayat klaim saya</h2>
-      <button type="button" id="myHistoryCloseBtn" style="border:none; background:transparent; font-size:20px; cursor:pointer; color:#66748C;">&times;</button>
-    </div>
-    <p class="form-sub" id="myHistorySub">Memuat...</p>
-    <div id="myHistoryList" style="overflow-y:auto; flex:1;"></div>
-  </div>
-</div>
-  <script>
+<script>
 const KATEGORI = [
   { label: "BBM", color: "#BA7517", bg: "#FAEEDA" },
   { label: "Transportasi Umum", color: "#185FA5", bg: "#E6F1FB" },
@@ -1342,83 +1330,6 @@ function parseNominal(str){
   const cleaned = String(str).replace(/[^0-9]/g, "");
   return Number(cleaned) || 0;
 }
-async function showMyHistory(){
-  const nama = form.namaLengkap.trim();
-  const overlay = document.getElementById("myHistoryOverlay");
-  const title = document.getElementById("myHistoryTitle");
-  const sub = document.getElementById("myHistorySub");
-  const list = document.getElementById("myHistoryList");
-
-  if(!nama || !STAFF.some(s => s.nama === nama)){
-    showToast("Pilih nama kamu dulu di kolom 1 sebelum lihat riwayat", true);
-    return;
-  }
-
-  title.textContent = "Riwayat klaim: " + nama;
-  sub.textContent = "Memuat...";
-  list.innerHTML = "";
-  overlay.classList.remove("hidden");
-
-  if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
-    sub.textContent = "Fitur belum diatur, hubungi admin";
-    return;
-  }
-
-  try{
-    const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
-    if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
-    const text = await res.text();
-    const rows = parseCSV(text);
-
-    let headerRowIdx = rows.findIndex(r =>
-      r.some(cell => cell.trim().toLowerCase().includes("nama lengkap")) &&
-      r.some(cell => cell.trim().toLowerCase().includes("timestamp"))
-    );
-    if(headerRowIdx === -1) headerRowIdx = 0;
-
-    const header = rows[headerRowIdx].map(h => h.trim().toLowerCase());
-    const idx = {
-      timestamp: header.findIndex(h => h.includes("timestamp")),
-      nama: header.findIndex(h => h.includes("nama lengkap")),
-      kategori: header.findIndex(h => h.includes("kategori")),
-      lokasi: header.findIndex(h => h.includes("titik lokasi")),
-      tanggalNota: header.findIndex(h => h.includes("tanggal nota")),
-      nominal: header.findIndex(h => h.includes("nominal")),
-      outlet: header.findIndex(h => h.includes("kode outlet")),
-    };
-
-    const mine = rows.slice(headerRowIdx + 1)
-      .filter(r => r.some(cell => cell && cell.trim() !== "") && idx.nama >= 0 && (r[idx.nama] || "").trim() === nama)
-      .sort((a, b) => (b[idx.timestamp] || "").localeCompare(a[idx.timestamp] || ""));
-
-    if(mine.length === 0){
-      sub.textContent = "Belum ada klaim tercatat atas nama kamu.";
-      return;
-    }
-
-    sub.textContent = mine.length + " klaim ditemukan (data dari Google Sheets, mungkin ada jeda beberapa menit setelah kirim).";
-    list.innerHTML = mine.map(r => {
-      const meta = kategoriMeta(idx.kategori >= 0 ? r[idx.kategori] : "");
-      const tglUpload = idx.timestamp >= 0 ? (r[idx.timestamp] || "").split(" ")[0] : "-";
-      const lokasi = idx.lokasi >= 0 ? r[idx.lokasi] : "";
-      const outlet = idx.outlet >= 0 ? r[idx.outlet] : "";
-      const nominal = idx.nominal >= 0 ? formatRupiah(parseNominal(r[idx.nominal])) : "-";
-      return `
-        <div style="border-bottom:1px solid #E7EEF6; padding:10px 0;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span class="chip" style="color:${meta.color}; background:${meta.bg};">${esc(idx.kategori>=0?r[idx.kategori]:"")}</span>
-            <span style="font-family:'IBM Plex Mono',monospace; font-weight:600; color:#1E56A0;">${nominal}</span>
-          </div>
-          <div style="font-size:12.5px; color:#3A4A63; margin-top:4px;">${esc(lokasi)}${outlet ? " ("+esc(outlet)+")" : ""}</div>
-          <div style="font-size:11.5px; color:#66748C; margin-top:2px;">Diupload: ${esc(tglUpload)}</div>
-        </div>`;
-    }).join("");
-  }catch(err){
-    console.error(err);
-    sub.textContent = "Gagal memuat riwayat: " + err.message;
-  }
-}
-
 async function handleLoadFromSheet(){
   if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
     showToast("URL Google Sheets belum diatur, hubungi pembuat aplikasi", true);
@@ -1875,13 +1786,6 @@ function initEvents(){
   });
   document.getElementById("previewImg").addEventListener("click", e=> e.stopPropagation());
   document.getElementById("previewCloseBtn").addEventListener("click", ()=>{
-    document.getElementById("myHistoryBtn").addEventListener("click", showMyHistory);
-document.getElementById("myHistoryCloseBtn").addEventListener("click", ()=>{
-  document.getElementById("myHistoryOverlay").classList.add("hidden");
-});
-document.getElementById("myHistoryOverlay").addEventListener("click", e=>{
-  if(e.target.id === "myHistoryOverlay") document.getElementById("myHistoryOverlay").classList.add("hidden");
-});
     document.getElementById("previewOverlay").classList.add("hidden");
   });
 }
