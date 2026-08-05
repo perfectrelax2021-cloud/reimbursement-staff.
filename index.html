@@ -1596,16 +1596,16 @@ function handleExport(){
   XLSX.writeFile(wb, `reimbursement-staff-${stamp}${suffix}.xlsx`);
   showToast("File Excel sedang diunduh");
 }
-  function sanitizeSheetName(name, used){
+ function sanitizeSheetName(name, used){
   let base = String(name).replace(/[:\\/?*\[\]]/g, "").trim().slice(0,31) || "Sheet";
   let candidate = base;
   let i = 2;
-  while(used.has(candidate)){
+  while(used.has(candidate.toLowerCase())){
     const suffix = " ("+i+")";
     candidate = base.slice(0, 31 - suffix.length) + suffix;
     i++;
   }
-  used.add(candidate);
+  used.add(candidate.toLowerCase());
   return candidate;
 }
 
@@ -1668,6 +1668,15 @@ async function urlToBase64(url){
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+}
+  async function driveImageToDataUrl(driveUrl){
+  const m = String(driveUrl).match(/[?&]id=([a-zA-Z0-9_-]+)/) || String(driveUrl).match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const id = m ? m[1] : null;
+  if(!id) throw new Error("ID Drive tidak ditemukan di URL");
+  const res = await fetch(WEBAPP_URL + "?action=getImage&id=" + id + "&t=" + Date.now());
+  const json = await res.json();
+  if(json.status !== "ok") throw new Error(json.message || "Gagal mengambil gambar dari Drive");
+  return "data:" + json.mime + ";base64," + json.base64;
 }
 async function handleExportPhotoServer(){
   if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")){
@@ -1839,7 +1848,7 @@ async function handleExportPhotoServer(){
             if(e.notaBukti){
               try{
                 let dataUrl = e.notaBukti;
-                if(dataUrl.startsWith("http")) dataUrl = await urlToBase64(dataUrl);
+                if(dataUrl.startsWith("http")) dataUrl = await driveImageToDataUrl(dataUrl);
                 const base64 = dataUrl.split(",")[1];
                 const ext = dataUrl.includes("image/png") ? "png" : "jpeg";
                 const imageId = workbook.addImage({ base64, extension: ext });
