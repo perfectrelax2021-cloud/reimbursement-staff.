@@ -926,6 +926,7 @@ const OUTLETS = [
           <option value="nama">Urutkan: Nama (A-Z)</option>
         </select>
         <button type="button" class="export-btn" id="exportBtn">&#128190; Export Excel</button>
+        <button type="button" class="export-btn" id="exportPerNamaBtn">&#128203; Export Excel (per nama)</button>
         <button type="button" class="export-btn" id="syncSheetBtn">&#128260; Muat data dari Google Sheets</button>
         <button type="button" class="export-btn" id="exportPhotoBtn">&#128248; Export Foto Nota (lokal)</button>
         <button type="button" class="export-btn" id="exportPhotoServerBtn">&#9729; Export Foto Nota (semua staff)</button>
@@ -1594,6 +1595,51 @@ function handleExport(){
   XLSX.writeFile(wb, `reimbursement-staff-${stamp}${suffix}.xlsx`);
   showToast("File Excel sedang diunduh");
 }
+  function sanitizeSheetName(name, used){
+  let base = String(name).replace(/[:\\/?*\[\]]/g, "").trim().slice(0,31) || "Sheet";
+  let candidate = base;
+  let i = 2;
+  while(used.has(candidate)){
+    const suffix = " ("+i+")";
+    candidate = base.slice(0, 31 - suffix.length) + suffix;
+    i++;
+  }
+  used.add(candidate);
+  return candidate;
+}
+
+function handleExportPerNama(){
+  const filtered = getFiltered();
+  if(filtered.length === 0){ showToast("Tidak ada data untuk diekspor", true); return; }
+
+  const grouped = {};
+  filtered.forEach(e=>{
+    const key = e.namaLengkap || "Tanpa Nama";
+    (grouped[key] = grouped[key] || []).push(e);
+  });
+
+  const wb = XLSX.utils.book_new();
+  const usedNames = new Set();
+  Object.keys(grouped).sort().forEach(nama=>{
+    const rows = grouped[nama].map(e => ({
+      "Timestamp": formatTimestamp(e.createdAt),
+      "Nota Claim": e.notaNamaFile ? "Lihat di aplikasi (" + e.notaNamaFile + ")" : "-",
+      "Nama Lengkap": e.namaLengkap,
+      "Kategori Claim": e.kategori,
+      "Titik Lokasi Sesuai Dashboard": e.titikLokasi,
+      "Tanggal Nota Claim": e.tanggalNota,
+      "Nominal Claim": Number(e.nominal)||0,
+      "Keterangan Lain Lain ( Opsional )": e.keterangan || "",
+      "Kode Outlet": e.kodeOutlet,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{wch:20},{wch:26},{wch:22},{wch:20},{wch:30},{wch:16},{wch:16},{wch:28},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(nama, usedNames));
+  });
+
+  XLSX.writeFile(wb, `reimbursement-per-staff-${todayISO()}.xlsx`);
+  showToast("File Excel per staff sedang diunduh");
+}
 
 const CATEGORY_EXPORT_ORDER = ["BBM", "Transportasi Umum", "Parkir", "Perlengkapan Display", "ATK", "Biaya Ongkir", "Biaya Kartu Modem"];
 const CM_TO_PX = 37.7952755906;
@@ -1775,6 +1821,7 @@ function initEvents(){
     sortBy = e.target.value; renderLedger();
   });
   document.getElementById("exportBtn").addEventListener("click", handleExport);
+  document.getElementById("exportPerNamaBtn").addEventListener("click", handleExportPerNama);
   document.getElementById("exportPhotoBtn").addEventListener("click", handleExportPhoto);
   document.getElementById("exportPhotoServerBtn").addEventListener("click", handleExportPhotoServer);
   document.getElementById("syncSheetBtn").addEventListener("click", handleLoadFromSheet);
