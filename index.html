@@ -927,10 +927,7 @@ const OUTLETS = [
           <option value="nama">Urutkan: Nama (A-Z)</option>
         </select>
         <button type="button" class="export-btn" id="exportBtn">&#128190; Export Excel</button>
-        <button type="button" class="export-btn" id="exportPerNamaBtn">&#128203; Export Excel (per nama)</button>
         <button type="button" class="export-btn" id="syncSheetBtn">&#128260; Muat data dari Google Sheets</button>
-        <button type="button" class="export-btn" id="exportPhotoBtn">&#128248; Export Foto Nota (lokal)</button>
-        <button type="button" class="export-btn" id="exportPhotoServerBtn">&#9729; Export Foto Nota (semua staff)</button>
         <button type="button" class="export-btn" id="exportPhotoVoucherBtn">&#128248; Export Foto (per staff, otomatis)</button>
       </div>
     </div>
@@ -1945,9 +1942,6 @@ function initEvents(){
     sortBy = e.target.value; renderLedger();
   });
   document.getElementById("exportBtn").addEventListener("click", handleExport);
-  document.getElementById("exportPerNamaBtn").addEventListener("click", handleExportPerNama);
-  document.getElementById("exportPhotoBtn").addEventListener("click", handleExportPhoto);
-  document.getElementById("exportPhotoServerBtn").addEventListener("click", handleExportPhotoServer);
   document.getElementById("exportPhotoVoucherBtn").addEventListener("click", handleExportPhotoVoucher);
   document.getElementById("syncSheetBtn").addEventListener("click", handleLoadFromSheet);
 
