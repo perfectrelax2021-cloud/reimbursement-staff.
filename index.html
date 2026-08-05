@@ -883,7 +883,7 @@ const OUTLETS = [
         <label>6. Nominal claim</label>
         <div class="rp-wrap">
           <span class="rp-prefix">Rp</span>
-          <input type="number" min="0" id="f_nominal" placeholder="0" />
+          <input type="text" inputmode="numeric" id="f_nominal" placeholder="0" />
         </div>
         <div class="error-text hidden" id="err_nominal">Masukkan nominal yang valid</div>
       </div>
@@ -1744,7 +1744,11 @@ function initEvents(){
     updateOutletFieldsVisibility();
   });
   document.getElementById("f_tanggalNota").addEventListener("change", e=>{ form.tanggalNota = e.target.value; });
-  document.getElementById("f_nominal").addEventListener("input", e=>{ form.nominal = e.target.value; });
+  document.getElementById("f_nominal").addEventListener("input", e=>{
+  const digitsOnly = e.target.value.replace(/[^0-9]/g, "");
+  form.nominal = digitsOnly;
+  e.target.value = digitsOnly ? Number(digitsOnly).toLocaleString("id-ID") : "";
+});
   document.getElementById("f_keterangan").addEventListener("input", e=>{ form.keterangan = e.target.value; });
 
   const outletInput = document.getElementById("f_outletQuery");
