@@ -1825,7 +1825,11 @@ async function handleExportPhotoServer(){
       sheet.getCell(1,7).value = "Total Klaim"; sheet.getCell(1,7).font = FONT;
       sheet.getCell(1,8).value = formatRupiah(totalNominal); sheet.getCell(1,8).font = FONT;
 
-      const group = sortEntriesForPhotoExport(grouped[nama]);
+      let group = [];
+CATEGORY_EXPORT_ORDER.forEach(kategori=>{
+  const inCategory = grouped[nama].filter(e => e.kategori === kategori);
+  group = group.concat(sortEntriesForPhotoExport(inCategory));
+});
       let r = 4;
 
       for(let i=0; i<group.length; i+=PHOTOS_PER_ROW){
