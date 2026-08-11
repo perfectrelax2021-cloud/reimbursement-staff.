@@ -1015,7 +1015,9 @@ function formatTanggal(iso){
   if(!iso) return "-";
   const d = parseFlexibleDate(iso);
   if(isNaN(d.getTime())) return String(iso); // tampilkan apa adanya kalau tetap gagal dibaca
-  return d.toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+  const day = String(d.getDate()).padStart(2,"0");
+  const month = MONTHS_EN[d.getMonth()];
+  return day + "-" + month;
 }
 function formatTimestamp(iso){
   if(!iso) return "-";
