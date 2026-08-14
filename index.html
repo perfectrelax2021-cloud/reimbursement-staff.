@@ -924,6 +924,12 @@ const OUTLETS = [
       <h2 class="form-title">Riwayat klaim</h2>
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <input type="text" class="filter-select" id="filterNama" placeholder="Cari nama..." style="width:150px;" />
+        <select class="filter-select" id="filterTglJenis">
+  <option value="tanggalUpload">Filter: Tgl Upload</option>
+  <option value="tanggalNota">Filter: Tgl Nota</option>
+</select>
+<input type="date" class="filter-select" id="filterTglMulai" title="Dari tanggal" />
+<input type="date" class="filter-select" id="filterTglSampai" title="Sampai tanggal" />
         <select class="filter-select" id="filterKategori">
           <option value="">Semua kategori</option>
         </select>
@@ -985,6 +991,9 @@ let view = "staff";
 let filterKategori = "";
 let filterNama = "";
 let sortBy = "terbaru";
+let filterTglMulai = "";
+let filterTglSampai = "";
+let filterTglJenis = "tanggalUpload";
 
 /* ===== helpers ===== */
 function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
@@ -1505,6 +1514,12 @@ function getFiltered(){
     const q = filterNama.trim().toLowerCase();
     list = list.filter(e => (e.namaLengkap || "").toLowerCase().includes(q));
   }
+  if(filterTglMulai){
+    list = list.filter(e => (e[filterTglJenis] || "") >= filterTglMulai);
+  }
+  if(filterTglSampai){
+    list = list.filter(e => (e[filterTglJenis] || "") <= filterTglSampai);
+  }
   list = [...list];
   if(sortBy === "nama"){
     list.sort((a, b) => (a.namaLengkap || "").localeCompare(b.namaLengkap || ""));
@@ -1937,6 +1952,15 @@ function initEvents(){
   });
   document.getElementById("filterNama").addEventListener("input", e=>{
     filterNama = e.target.value; renderLedger();
+  });
+  document.getElementById("filterTglJenis").addEventListener("change", e=>{
+    filterTglJenis = e.target.value; renderLedger();
+  });
+  document.getElementById("filterTglMulai").addEventListener("change", e=>{
+    filterTglMulai = e.target.value; renderLedger();
+  });
+  document.getElementById("filterTglSampai").addEventListener("change", e=>{
+    filterTglSampai = e.target.value; renderLedger();
   });
   document.getElementById("sortBy").addEventListener("change", e=>{
     sortBy = e.target.value; renderLedger();
