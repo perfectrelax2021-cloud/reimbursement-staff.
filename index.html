@@ -1513,12 +1513,21 @@ function getFiltered(){
     const q = filterNama.trim().toLowerCase();
     list = list.filter(e => (e.namaLengkap || "").toLowerCase().includes(q));
   }
-  if(filterTglMulai){
-    list = list.filter(e => (e[filterTglJenis] || "") >= filterTglMulai);
-  }
-  if(filterTglSampai){
-    list = list.filter(e => (e[filterTglJenis] || "") <= filterTglSampai);
-  }
+ if(filterTglMulai){
+  const startD = new Date(filterTglMulai);
+  list = list.filter(e => {
+    const d = parseFlexibleDate(e[filterTglJenis]);
+    return !isNaN(d.getTime()) && d >= startD;
+  });
+}
+if(filterTglSampai){
+  const endD = new Date(filterTglSampai);
+  endD.setHours(23,59,59,999);
+  list = list.filter(e => {
+    const d = parseFlexibleDate(e[filterTglJenis]);
+    return !isNaN(d.getTime()) && d <= endD;
+  });
+}
   list = [...list];
   if(sortBy === "nama"){
     list.sort((a, b) => (a.namaLengkap || "").localeCompare(b.namaLengkap || ""));
