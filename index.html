@@ -1009,7 +1009,7 @@ const MONTH_MAP_ID = {
 function parseFlexibleDate(iso){
   let d = new Date(iso);
   if(!isNaN(d.getTime())) return d;
-  // fallback untuk format singkat dari Google Sheets, contoh: "31-Jul" atau "31-Jul-2026"
+  // fallback 1: format singkat dari Google Sheets, contoh: "31-Jul" atau "31-Jul-2026"
   const m = String(iso).trim().match(/^(\d{1,2})[-\/ ]([A-Za-z]{3,})(?:[-\/ ](\d{2,4}))?$/);
   if(m){
     const day = parseInt(m[1], 10);
@@ -1018,11 +1018,21 @@ function parseFlexibleDate(iso){
     if(year < 100) year += 2000;
     if(monIdx !== undefined){
       d = new Date(year, monIdx, day);
+      if(!isNaN(d.getTime())) return d;
     }
+  }
+  // fallback 2: format angka DD/MM/YYYY atau DD-MM-YYYY (locale Google Sheets Indonesia)
+  const m2 = String(iso).trim().match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+  if(m2){
+    const day = parseInt(m2[1], 10);
+    const month = parseInt(m2[2], 10) - 1;
+    let year = parseInt(m2[3], 10);
+    if(year < 100) year += 2000;
+    const d2 = new Date(year, month, day);
+    if(!isNaN(d2.getTime())) return d2;
   }
   return d;
 }
-
 function formatTanggal(iso){
   if(!iso) return "-";
   const d = parseFlexibleDate(iso);
