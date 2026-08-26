@@ -1545,11 +1545,11 @@ function handleSubmit(ev){
         resetForm();
         clearDraft();
         showToast("Klaim berhasil disimpan");
-      }
-        } else {
+      } else {
           entries.shift();
           showToast("Gagal menyimpan klaim, coba lagi", true);
         }
+        
       }catch(innerErr){
         console.error("Error saat menyimpan klaim:", innerErr);
         btn.disabled = false;
