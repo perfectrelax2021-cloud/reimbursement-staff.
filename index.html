@@ -957,8 +957,25 @@ const OUTLETS = [
     <div class="stub" id="stubRow"></div>
     <div id="tableArea"></div>
   </div>
-</div>
-
+    <div id="statusView" class="ledger-card hidden">
+    <div class="ledger-header-row">
+      <h2 class="form-title">Status Upload Nota</h2>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input type="text" class="filter-select" id="statusFilterNama" placeholder="Cari nama..." style="width:150px;" />
+        <select class="filter-select" id="statusFilterKategori">
+          <option value="">Semua kategori</option>
+        </select>
+        <select class="filter-select" id="statusSortBy">
+          <option value="terbaru">Urutkan: Terbaru</option>
+          <option value="nama">Urutkan: Nama (A-Z)</option>
+        </select>
+        <button type="button" class="export-btn" id="statusRefreshBtn">&#128260; Muat Ulang</button>
+      </div>
+    </div>
+    <div class="stub" id="statusStubRow"></div>
+    <div id="statusTableArea"></div>
+  </div>
+  
 <div id="pinOverlay" class="overlay hidden">
   <div class="pin-card">
     <h2 class="form-title">Masuk sebagai admin</h2>
@@ -1006,6 +1023,9 @@ let sortBy = "terbaru";
 let filterTglMulai = "";
 let filterTglSampai = "";
 let filterTglJenis = "tanggalUpload";
+let sFilterKategori = "";
+let sFilterNama = "";
+let sSortBy = "terbaru";
 
 /* ===== helpers ===== */
 function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
@@ -1129,9 +1149,11 @@ function compressImage(file, maxDim, quality){
 function initSelects(){
   const kSel = document.getElementById("f_kategori");
   const fSel = document.getElementById("filterKategori");
+  const sSel = document.getElementById("statusFilterKategori");
   KATEGORI.forEach(k=>{
     const o1 = document.createElement("option"); o1.value = k.label; o1.textContent = k.label; kSel.appendChild(o1);
     const o2 = document.createElement("option"); o2.value = k.label; o2.textContent = k.label; fSel.appendChild(o2);
+    const o3 = document.createElement("option"); o3.value = k.label; o3.textContent = k.label; sSel.appendChild(o3);
   });
 }
 
@@ -1148,8 +1170,16 @@ function renderHeaderRight(){
         <button type="button" class="btn-outline danger" id="exitAdminBtn">&#8592; Keluar admin</button>
       </div>`;
     document.getElementById("exitAdminBtn").onclick = () => { view = "staff"; render(); };
+    } else if(view === "status"){
+    el.innerHTML = `<button type="button" class="btn-outline" id="backToStaffBtn">&#8592; Kembali</button>`;
+    document.getElementById("backToStaffBtn").onclick = () => { view = "staff"; render(); };
   } else {
-    el.innerHTML = `<button type="button" class="btn-outline" id="adminLinkBtn">&#128274; Masuk admin</button>`;
+    el.innerHTML = `
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button type="button" class="btn-outline" id="statusLinkBtn">&#128203; Status Upload</button>
+        <button type="button" class="btn-outline" id="adminLinkBtn">&#128274; Masuk admin</button>
+      </div>`;
+    document.getElementById("statusLinkBtn").onclick = () => { view = "status"; render(); };
     document.getElementById("adminLinkBtn").onclick = () => {
       document.getElementById("pinOverlay").classList.remove("hidden");
       document.getElementById("pinInput").value = "";
@@ -1162,8 +1192,10 @@ function renderHeaderRight(){
 function render(){
   document.getElementById("staffView").classList.toggle("hidden", view !== "staff");
   document.getElementById("adminView").classList.toggle("hidden", view !== "admin");
+  document.getElementById("statusView").classList.toggle("hidden", view !== "status");
   renderHeaderRight();
   if(view === "admin") renderLedger();
+  if(view === "status") loadStatusView();
 }
 
 /* ===== nama staff autocomplete ===== */
@@ -1404,75 +1436,77 @@ function parseNominal(str){
   const cleaned = String(str).replace(/[^0-9]/g, "");
   return Number(cleaned) || 0;
 }
-async function handleLoadFromSheet(){
+async function fetchAndSetEntriesFromSheet(){
   if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
-    showToast("URL Google Sheets belum diatur, hubungi pembuat aplikasi", true);
-    return;
+    throw new Error("URL Google Sheets belum diatur, hubungi pembuat aplikasi");
   }
+  const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
+  if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
+  const text = await res.text();
+  const rows = parseCSV(text);
+  if(rows.length < 2){ throw new Error("Data di Google Sheets kosong"); }
+
+  let headerRowIdx = rows.findIndex(r =>
+    r.some(cell => cell.trim().toLowerCase().includes("nama lengkap")) &&
+    r.some(cell => cell.trim().toLowerCase().includes("timestamp"))
+  );
+  if(headerRowIdx === -1) headerRowIdx = 0;
+
+  const header = rows[headerRowIdx].map(h => h.trim().toLowerCase());
+  const idx = {
+    timestamp: header.findIndex(h => h.includes("timestamp")),
+    nota: header.findIndex(h => h.includes("nota claim")),
+    nama: header.findIndex(h => h.includes("nama lengkap")),
+    kategori: header.findIndex(h => h.includes("kategori")),
+    lokasi: header.findIndex(h => h.includes("titik lokasi")),
+    tanggalNota: header.findIndex(h => h.includes("tanggal nota")),
+    nominal: header.findIndex(h => h.includes("nominal")),
+    keterangan: header.findIndex(h => h.includes("keterangan")),
+    outlet: header.findIndex(h => h.includes("kode outlet")),
+  };
+
+  if(idx.nama === -1 || idx.timestamp === -1){
+    throw new Error("Format kolom di Google Sheets tidak dikenali, hubungi pembuat aplikasi");
+  }
+
+  const loaded = rows.slice(headerRowIdx + 1)
+    .filter(r => r.some(cell => cell && cell.trim() !== ""))
+    .map((r, i) => {
+      const timestampRaw = idx.timestamp >= 0 ? (r[idx.timestamp] || "").trim() : "";
+      const tanggalUpload = timestampRaw ? timestampRaw.split(" ")[0] : "";
+      const notaRaw = idx.nota >= 0 ? (r[idx.nota] || "").trim() : "";
+      const driveIdMatch = notaRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      const notaImageUrl = driveIdMatch ? `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w1200` : "";
+      return {
+        id: "sheet-" + i + "-" + (timestampRaw || i),
+        tanggalUpload: tanggalUpload,
+        createdAt: timestampRaw ? timestampRaw.replace(" ", "T") : "",
+        namaLengkap: idx.nama >= 0 ? (r[idx.nama] || "").trim() : "",
+        kategori: idx.kategori >= 0 ? (r[idx.kategori] || "").trim() : "",
+        titikLokasi: idx.lokasi >= 0 ? (r[idx.lokasi] || "").trim() : "",
+        kodeOutlet: idx.outlet >= 0 ? (r[idx.outlet] || "").trim() : "",
+        tanggalNota: idx.tanggalNota >= 0 ? (r[idx.tanggalNota] || "").trim() : "",
+        nominal: idx.nominal >= 0 ? parseNominal(r[idx.nominal]) : 0,
+        notaBukti: notaImageUrl,
+        notaNamaFile: notaRaw,
+        keterangan: idx.keterangan >= 0 ? (r[idx.keterangan] || "").trim() : "",
+      };
+    });
+
+  entries = loaded;
+  return loaded.length;
+}
+
+async function handleLoadFromSheet(){
   const btn = document.getElementById("syncSheetBtn");
   const originalText = btn.innerHTML;
   btn.innerHTML = "Memuat...";
   btn.disabled = true;
   try{
-    const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
-    if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
-    const text = await res.text();
-    const rows = parseCSV(text);
-    if(rows.length < 2){ showToast("Data di Google Sheets kosong", true); return; }
-
-   let headerRowIdx = rows.findIndex(r =>
-  r.some(cell => cell.trim().toLowerCase().includes("nama lengkap")) &&
-  r.some(cell => cell.trim().toLowerCase().includes("timestamp"))
-);
-    
-if(headerRowIdx === -1) headerRowIdx = 0; // fallback kalau tidak ketemu, anggap baris pertama
-
-const header = rows[headerRowIdx].map(h => h.trim().toLowerCase());
-const idx = {
-  timestamp: header.findIndex(h => h.includes("timestamp")),
-  nota: header.findIndex(h => h.includes("nota claim")),
-  nama: header.findIndex(h => h.includes("nama lengkap")),
-  kategori: header.findIndex(h => h.includes("kategori")),
-  lokasi: header.findIndex(h => h.includes("titik lokasi")),
-  tanggalNota: header.findIndex(h => h.includes("tanggal nota")),
-  nominal: header.findIndex(h => h.includes("nominal")),
-  keterangan: header.findIndex(h => h.includes("keterangan")),
-  outlet: header.findIndex(h => h.includes("kode outlet")),
-};
-
-if(idx.nama === -1 || idx.timestamp === -1){
-  showToast("Format kolom di Google Sheets tidak dikenali, hubungi pembuat aplikasi", true);
-  return;
-}
-
-    const loaded = rows.slice(headerRowIdx + 1)
-      .filter(r => r.some(cell => cell && cell.trim() !== ""))
-      .map((r, i) => {
-       const timestampRaw = idx.timestamp >= 0 ? (r[idx.timestamp] || "").trim() : "";
-    const tanggalUpload = timestampRaw ? timestampRaw.split(" ")[0] : "";
-   const notaRaw = idx.nota >= 0 ? (r[idx.nota] || "").trim() : "";
-   const driveIdMatch = notaRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
-   const notaImageUrl = driveIdMatch ? `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w1200` : "";
-   return {
-  id: "sheet-" + i + "-" + (timestampRaw || i),
-  tanggalUpload: tanggalUpload,
-  createdAt: timestampRaw ? timestampRaw.replace(" ", "T") : "",
-  namaLengkap: idx.nama >= 0 ? (r[idx.nama] || "").trim() : "",
-  kategori: idx.kategori >= 0 ? (r[idx.kategori] || "").trim() : "",
-  titikLokasi: idx.lokasi >= 0 ? (r[idx.lokasi] || "").trim() : "",
-  kodeOutlet: idx.outlet >= 0 ? (r[idx.outlet] || "").trim() : "",
-  tanggalNota: idx.tanggalNota >= 0 ? (r[idx.tanggalNota] || "").trim() : "",
-  nominal: idx.nominal >= 0 ? parseNominal(r[idx.nominal]) : 0,
-  notaBukti: notaImageUrl,
-  notaNamaFile: notaRaw,
-  keterangan: idx.keterangan >= 0 ? (r[idx.keterangan] || "").trim() : "",
-   };
-  });
-
-    entries = loaded;
+    const count = await fetchAndSetEntriesFromSheet();
     renderLedger();
     renderHeaderRight();
-    showToast("Berhasil memuat " + loaded.length + " klaim dari Google Sheets (semua staff)");
+    showToast("Berhasil memuat " + count + " klaim dari Google Sheets (semua staff)");
   }catch(err){
     console.error(err);
     showToast("Gagal memuat dari Google Sheets: " + err.message, true);
@@ -1481,7 +1515,6 @@ if(idx.nama === -1 || idx.timestamp === -1){
     btn.disabled = false;
   }
 }
-
 function syncToSheet(record){
   if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")) return;
   const payload = {
@@ -1660,7 +1693,88 @@ function renderLedger(){
     });
   });
 }
+function getFilteredStatus(){
+  let list = sFilterKategori ? entries.filter(e => e.kategori === sFilterKategori) : entries;
+  if(sFilterNama.trim()){
+    const q = sFilterNama.trim().toLowerCase();
+    list = list.filter(e => (e.namaLengkap || "").toLowerCase().includes(q));
+  }
+  list = [...list];
+  if(sSortBy === "nama"){
+    list.sort((a, b) => (a.namaLengkap || "").localeCompare(b.namaLengkap || ""));
+  } else {
+    list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  }
+  return list;
+}
 
+function renderStatusTable(){
+  const filtered = getFilteredStatus();
+  const total = filtered.reduce((s,e)=> s + (Number(e.nominal)||0), 0);
+
+  const stub = document.getElementById("statusStubRow");
+  stub.innerHTML = Array.from({length:40}).map(()=>'<span class="stub-dot"></span>').join("");
+
+  const area = document.getElementById("statusTableArea");
+  if(filtered.length === 0){
+    area.innerHTML = `<p class="empty-state">Belum ada klaim tercatat.</p>`;
+    return;
+  }
+
+  let rows = filtered.map((e,idx)=>{
+    const meta = kategoriMeta(e.kategori);
+    return `
+    <tr style="background:${idx%2===0?'#FFFFFF':'#F7F6F2'}">
+      <td>${formatTanggal(e.tanggalUpload)}</td>
+      <td style="font-weight:500">${esc(e.namaLengkap)}</td>
+      <td><span class="chip" style="color:${meta.color}; background:${meta.bg}">${esc(e.kategori)}</span></td>
+      <td>${esc(e.titikLokasi) || '<span style="color:#9AA8C0;">-</span>'}</td>
+      <td>${e.kodeOutlet ? `<span class="outlet-badge">${esc(e.kodeOutlet)}</span>` : '<span style="color:#9AA8C0; font-size:12px;">-</span>'}</td>
+      <td>${formatTanggal(e.tanggalNota)}</td>
+      <td style="text-align:right; font-family:'IBM Plex Mono',monospace;">${formatRupiah(e.nominal)}</td>
+      <td>${e.notaBukti ? `<img src="${e.notaBukti}" class="nota-thumb-small" data-statuspreview="${e.id}" />` : '<span style="color:#A6A79C; font-size:12px;">-</span>'}</td>
+    </tr>`;
+  }).join("");
+
+  area.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Tgl upload</th><th>Nama</th><th>Kategori</th><th>Lokasi</th><th>Outlet</th>
+          <th>Tgl nota</th><th style="text-align:right;">Nominal</th><th>Nota</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td colspan="6" class="total-label">Total</td>
+          <td class="total-value" style="text-align:right;">${formatRupiah(total)}</td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+    </div>`;
+
+  area.querySelectorAll("[data-statuspreview]").forEach(img=>{
+    img.addEventListener("click", ()=>{
+      const e = entries.find(x=>x.id === img.getAttribute("data-statuspreview"));
+      if(e){
+        document.getElementById("previewImg").src = e.notaBukti;
+        document.getElementById("previewOverlay").classList.remove("hidden");
+      }
+    });
+  });
+}
+
+async function loadStatusView(){
+  const area = document.getElementById("statusTableArea");
+  area.innerHTML = `<p class="empty-state">Memuat data terbaru dari Google Sheets...</p>`;
+  try{
+    await fetchAndSetEntriesFromSheet();
+  }catch(err){
+    console.error(err);
+    area.innerHTML = `<p class="empty-state">Gagal memuat data: ${esc(err.message)}</p>`;
+    return;
+  }
+  renderStatusTable();
+}
 function handleExport(){
   const filtered = getFiltered();
   if(filtered.length === 0){ showToast("Tidak ada data untuk diekspor", true); return; }
@@ -2039,6 +2153,16 @@ function initEvents(){
   document.getElementById("exportBtn").addEventListener("click", handleExport);
   document.getElementById("exportPhotoVoucherBtn").addEventListener("click", handleExportPhotoVoucher);
   document.getElementById("syncSheetBtn").addEventListener("click", handleLoadFromSheet);
+  document.getElementById("statusFilterKategori").addEventListener("change", e=>{
+    sFilterKategori = e.target.value; renderStatusTable();
+  });
+  document.getElementById("statusFilterNama").addEventListener("input", e=>{
+    sFilterNama = e.target.value; renderStatusTable();
+  });
+  document.getElementById("statusSortBy").addEventListener("change", e=>{
+    sSortBy = e.target.value; renderStatusTable();
+  });
+  document.getElementById("statusRefreshBtn").addEventListener("click", loadStatusView);
 
   document.getElementById("pinSubmitBtn").addEventListener("click", tryPinLogin);
   document.getElementById("pinInput").addEventListener("keydown", e=>{ if(e.key === "Enter") tryPinLogin(); });
