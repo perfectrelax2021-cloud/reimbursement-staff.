@@ -1307,6 +1307,11 @@ function restoreDraft(){
     const raw = sessionStorage.getItem(DRAFT_KEY);
     if(!raw) return;
     const draft = JSON.parse(raw);
+    const namaValid = !draft.namaLengkap || STAFF.some(s => s.nama === draft.namaLengkap);
+    if(!namaValid){
+      clearDraft();
+      return;
+    }
     form = Object.assign(form, draft);
     document.getElementById("f_nama").value = form.namaLengkap || "";
     document.getElementById("f_kategori").value = form.kategori || "";
