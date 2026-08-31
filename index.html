@@ -1802,7 +1802,18 @@ function handleExport(){
     "Keterangan Lain Lain ( Opsional )": e.keterangan || "",
     "Kode Outlet": e.kodeOutlet,
   }));
-  function renderOutletManageList(){
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [{wch:20},{wch:26},{wch:22},{wch:20},{wch:30},{wch:16},{wch:16},{wch:28},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  const sheetName = filterKategori ? filterKategori.slice(0,31) : "Reimbursement";
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const stamp = todayISO();
+  const suffix = (filterKategori ? "-" + filterKategori.replace(/\s+/g,"") : "") + (filterNama.trim() ? "-" + filterNama.trim().replace(/\s+/g,"") : "");
+  XLSX.writeFile(wb, `reimbursement-staff-${stamp}${suffix}.xlsx`);
+  showToast("File Excel sedang diunduh");
+}
+
+function renderOutletManageList(){
   const box = document.getElementById("outletManageList");
   if(DYNAMIC_OUTLETS.length === 0){
     box.innerHTML = `<p style="color:#9AA8C0; font-size:13px;">Belum ada lokasi tambahan yang ditambahkan lewat dashboard.</p>`;
@@ -1839,16 +1850,6 @@ async function handleAddOutlet(){
     btn.innerHTML = originalText;
     btn.disabled = false;
   }
-}
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{wch:20},{wch:26},{wch:22},{wch:20},{wch:30},{wch:16},{wch:16},{wch:28},{wch:12}];
-  const wb = XLSX.utils.book_new();
-  const sheetName = filterKategori ? filterKategori.slice(0,31) : "Reimbursement";
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  const stamp = todayISO();
-  const suffix = (filterKategori ? "-" + filterKategori.replace(/\s+/g,"") : "") + (filterNama.trim() ? "-" + filterNama.trim().replace(/\s+/g,"") : "");
-  XLSX.writeFile(wb, `reimbursement-staff-${stamp}${suffix}.xlsx`);
-  showToast("File Excel sedang diunduh");
 }
  function sanitizeSheetName(name, used){
   let base = String(name).replace(/[:\\/?*\[\]]/g, "").trim().slice(0,31) || "Sheet";
