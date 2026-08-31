@@ -959,6 +959,15 @@ const OUTLETS = [
     <div class="stub" id="stubRow"></div>
     <div id="tableArea"></div>
   </div>
+    <div id="outletManageCard" class="ledger-card hidden">
+    <h2 class="form-title">Tambah Lokasi / Outlet Baru</h2>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+      <input type="text" class="filter-select" id="newOutletKode" placeholder="Kode outlet (misal: M999)" style="width:180px;" />
+      <input type="text" class="filter-select" id="newOutletLokasi" placeholder="Nama lokasi" style="width:280px;" />
+      <button type="button" class="export-btn" id="addOutletBtn">&#10133; Tambah Lokasi</button>
+    </div>
+    <div id="outletManageList" style="margin-top:16px;"></div>
+  </div>
     <div id="statusView" class="ledger-card hidden">
     <div class="ledger-header-row">
       <h2 class="form-title">Status Upload Nota</h2>
@@ -1016,6 +1025,7 @@ const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbz6-T9FyAKSVwNN-BRaG
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSZF8lQI8BwKO-n9lvf7cTBLSRgLBxL0-u0yJkMp0fGLSqAsWINTNWCJnkL52cDROK6xivVHHeVjFqa/pub?gid=672332227&single=true&output=csv";
 
 /* ===== state ===== */
+let DYNAMIC_OUTLETS = [];
 let entries = loadEntries();
 let form = { namaLengkap:"", kategori:"", outletQuery:"", titikLokasi:"", kodeOutlet:"", tanggalNota:"", nominal:"", notaBukti:"", notaNamaFile:"", keterangan:"" };
 let view = "staff";
@@ -1195,8 +1205,9 @@ function render(){
   document.getElementById("staffView").classList.toggle("hidden", view !== "staff");
   document.getElementById("adminView").classList.toggle("hidden", view !== "admin");
   document.getElementById("statusView").classList.toggle("hidden", view !== "status");
+  document.getElementById("outletManageCard").classList.toggle("hidden", view !== "admin");
   renderHeaderRight();
-  if(view === "admin") renderLedger();
+  if(view === "admin"){ renderLedger(); renderOutletManageList(); }
   if(view === "status") loadStatusView();
 }
 
@@ -1232,7 +1243,7 @@ function renderOutletSuggestions(){
   const q = form.outletQuery.trim().toLowerCase();
   const box = document.getElementById("outletSuggestBox");
   if(!q){ box.classList.add("hidden"); box.innerHTML=""; return; }
-  const matches = OUTLETS.filter(o => o.kode.toLowerCase().includes(q) || o.lokasi.toLowerCase().includes(q)).slice(0,8);
+  const matches = getAllOutlets().filter(o => o.kode.toLowerCase().includes(q) || o.lokasi.toLowerCase().includes(q)).slice(0,8);
   if(matches.length === 0){
     box.innerHTML = `<div class="suggest-empty">Outlet tidak ditemukan</div>`;
     box.classList.remove("hidden");
@@ -1246,8 +1257,8 @@ function renderOutletSuggestions(){
   box.classList.remove("hidden");
   box.querySelectorAll(".suggest-item").forEach(item=>{
     item.addEventListener("mousedown", () => {
-      const kode = item.getAttribute("data-kode");
-      const o = OUTLETS.find(x => x.kode === kode);
+       const kode = item.getAttribute("data-kode");
+      const o = getAllOutlets().find(x => x.kode === kode);
       if(!o) return;
       form.outletQuery = outletLabel(o);
       form.kodeOutlet = o.kode;
@@ -1791,6 +1802,44 @@ function handleExport(){
     "Keterangan Lain Lain ( Opsional )": e.keterangan || "",
     "Kode Outlet": e.kodeOutlet,
   }));
+  function renderOutletManageList(){
+  const box = document.getElementById("outletManageList");
+  if(DYNAMIC_OUTLETS.length === 0){
+    box.innerHTML = `<p style="color:#9AA8C0; font-size:13px;">Belum ada lokasi tambahan yang ditambahkan lewat dashboard.</p>`;
+    return;
+  }
+  box.innerHTML = `<p style="font-size:13px; color:#5B6B68; margin-bottom:6px;">Lokasi tambahan (${DYNAMIC_OUTLETS.length}):</p>` +
+    DYNAMIC_OUTLETS.map(o => `<span class="outlet-badge" style="margin:2px;">${esc(o.kode)} — ${esc(o.lokasi)}</span>`).join(" ");
+}
+
+async function handleAddOutlet(){
+  const kode = document.getElementById("newOutletKode").value.trim();
+  const lokasi = document.getElementById("newOutletLokasi").value.trim();
+  if(!kode || !lokasi){ showToast("Isi kode dan nama lokasi dulu", true); return; }
+  if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")){ showToast("URL Apps Script belum diatur", true); return; }
+
+  const btn = document.getElementById("addOutletBtn");
+  const originalText = btn.innerHTML;
+  btn.innerHTML = "Menyimpan...";
+  btn.disabled = true;
+  try{
+    const url = WEBAPP_URL + "?action=addOutlet&kode=" + encodeURIComponent(kode) + "&lokasi=" + encodeURIComponent(lokasi) + "&t=" + Date.now();
+    const res = await fetch(url);
+    const json = await res.json();
+    if(json.status !== "ok") throw new Error(json.message || "Gagal menambahkan lokasi");
+    await loadDynamicOutlets();
+    renderOutletManageList();
+    document.getElementById("newOutletKode").value = "";
+    document.getElementById("newOutletLokasi").value = "";
+    showToast("Lokasi berhasil ditambahkan");
+  }catch(err){
+    console.error(err);
+    showToast("Gagal: " + err.message, true);
+  }finally{
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
   const ws = XLSX.utils.json_to_sheet(rows);
   ws["!cols"] = [{wch:20},{wch:26},{wch:22},{wch:20},{wch:30},{wch:16},{wch:16},{wch:28},{wch:12}];
   const wb = XLSX.utils.book_new();
@@ -2165,6 +2214,7 @@ function initEvents(){
     sSortBy = e.target.value; renderStatusTable();
   });
   document.getElementById("statusRefreshBtn").addEventListener("click", loadStatusView);
+  document.getElementById("addOutletBtn").addEventListener("click", handleAddOutlet);
 
   document.getElementById("pinSubmitBtn").addEventListener("click", tryPinLogin);
   document.getElementById("pinInput").addEventListener("keydown", e=>{ if(e.key === "Enter") tryPinLogin(); });
@@ -2198,6 +2248,24 @@ function boot(){
   document.getElementById("autoDateBadge").textContent = "\uD83D\uDCC5 " + formatTanggal(todayISO());
   restoreDraft();
   render();
+  loadDynamicOutlets();
+}
+
+async function loadDynamicOutlets(){
+  if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")) return;
+  try{
+    const res = await fetch(WEBAPP_URL + "?action=getOutlets&t=" + Date.now());
+    const json = await res.json();
+    if(json.status === "ok"){
+      DYNAMIC_OUTLETS = json.outlets || [];
+    }
+  }catch(err){
+    console.error("Gagal memuat daftar outlet tambahan:", err);
+  }
+}
+
+function getAllOutlets(){
+  return OUTLETS.concat(DYNAMIC_OUTLETS);
 }
   boot();
 </script>
