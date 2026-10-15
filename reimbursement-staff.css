@@ -395,3 +395,12 @@
   .center-toast-icon { font-size: 34px; line-height: 1; }
   .center-toast-msg { font-size: 14.5px; font-weight: 600; color: #16233A; line-height: 1.4; }
   .center-toast.err .center-toast-msg { color: #A32D2D; }
+/* Sembunyikan kolom Nota hanya di halaman Status Upload */
+#statusTableArea th:nth-child(8),
+#statusTableArea td:nth-child(8) {
+  display: none;
+}
+/* rapikan baris Total di bagian bawah */
+#statusTableArea tfoot td:last-child {
+  display: none;
+}
