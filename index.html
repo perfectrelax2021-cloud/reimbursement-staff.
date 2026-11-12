@@ -914,6 +914,7 @@ const STAFF = [
         <button type="button" class="export-btn" id="syncSheetBtn">&#128260; Muat data dari Google Sheets</button>
         <button type="button" class="export-btn" id="exportPhotoVoucherBtn">&#128248; Export Foto (per staff, otomatis)</button>
         <button type="button" class="export-btn" id="checkDupBtn">&#128269; Cek Foto Dobel</button>
+        <button type="button" class="export-btn" id="rekapBtn">&#128209; Rekap Final</button>
       </div>
     </div>
     <div class="stub" id="stubRow"></div>
@@ -967,6 +968,32 @@ const STAFF = [
       <input type="checkbox" id="dupOnlyDiff" checked /> Hanya yang beda nama staff
     </label>
     <div id="dupResults" style="overflow-y:auto; flex:1;"></div>
+  </div>
+</div>
+  <div id="rekapOverlay" class="overlay hidden">
+  <div class="pin-card" style="width:860px; max-width:95vw; max-height:90vh; display:flex; flex-direction:column;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2 class="form-title">Rekap Final</h2>
+      <button type="button" id="rekapCloseBtn" style="border:none; background:transparent; font-size:22px; cursor:pointer; color:#66748C;">&times;</button>
+    </div>
+    <p class="form-sub" id="rekapSummary"></p>
+    <div style="overflow-y:auto; flex:1; padding-right:4px;">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+        <div><div style="font-size:12px; color:#66748C; margin-bottom:4px;">Periode</div><input id="rekapPeriode" class="filter-select" style="width:240px;" /></div>
+        <div><div style="font-size:12px; color:#66748C; margin-bottom:4px;">Nomor dasar</div><input id="rekapNomorDasar" class="filter-select" style="width:90px;" /></div>
+        <div><div style="font-size:12px; color:#66748C; margin-bottom:4px;">Bulan/Tahun nomor</div><input id="rekapBulanTahun" class="filter-select" style="width:110px;" /></div>
+      </div>
+      <h3 style="font-size:13px; margin:10px 0 4px; color:#3A4A63;">Kelompok sheet (satu sheet per kelompok)</h3>
+      <p style="font-size:12px; color:#66748C; margin-bottom:6px;">Nomor sheet = nomor dasar + akhiran, contoh 104A/PR/X/2026.</p>
+      <div id="rekapGroups"></div>
+      <button type="button" class="export-btn" id="rekapAddGroupBtn">+ Tambah kelompok</button>
+      <h3 style="font-size:13px; margin:14px 0 4px; color:#3A4A63;">Staff masuk sheet yang mana</h3>
+      <div id="rekapStaffList"></div>
+    </div>
+    <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+      <span style="font-size:12px; color:#66748C;">Kolom No Rekening dikosongkan, isi di Excel setelah diunduh.</span>
+      <button type="button" class="export-btn" id="rekapDownloadBtn">&#128190; Unduh Rekap Final</button>
+    </div>
   </div>
 </div>
 <div id="previewOverlay" class="overlay hidden">
@@ -2335,6 +2362,337 @@ document.addEventListener("click", ev => {
 });
 document.addEventListener("change", ev => {
   if(ev.target && ev.target.id === "dupOnlyDiff") renderDupResults();
+});
+  /* ===== rekap final ===== */
+const REKAP_KEY = "reimburse_rekap_v1";
+const REKAP_SIGN = [
+  { label: "Prepared by,", nama: "Diki Aprihermawan", jabatan: "Admin Operational" },
+  { label: "Checked by,",  nama: "Awan Hermawan",     jabatan: "Ass Manager OPR" },
+  { label: "Approved by,", nama: "Alex Yong",         jabatan: "Manager Operational" },
+];
+const REKAP_COL_NAMES = ["BBM", "Transport Fee", "Parking", "Display", "ATK", "Courier Service", "Lainnya"];
+const REKAP_CAT_COL = {
+  "BBM": 0, "Transportasi Umum": 1, "Parkir": 2, "Perlengkapan Display": 3,
+  "ATK": 4, "Biaya Ongkir": 5, "Biaya Kartu Modem": 6, "Biaya Pembelian Kuota": 6
+};
+const MONTHS_FULL_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const ROMAN_MONTH = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"];
+const REKAP_DEFAULT = {
+  nomorDasar: "104",
+  groups: [
+    { id: "g1", bank: "BNI",     suffix: "",  kelompok: "" },
+    { id: "g2", bank: "BSI",     suffix: "A", kelompok: "" },
+    { id: "g3", bank: "Mandiri", suffix: "B", kelompok: "Back Office" },
+    { id: "g4", bank: "Mandiri", suffix: "M", kelompok: "" },
+  ],
+  assign: {}
+};
+let rekapCfg = null;
+let rekapStaffNames = [];
+
+function loadRekapCfg(){
+  try{
+    const raw = localStorage.getItem(REKAP_KEY);
+    if(raw){
+      const c = JSON.parse(raw);
+      if(c && Array.isArray(c.groups)) return { nomorDasar: c.nomorDasar || "", groups: c.groups, assign: c.assign || {} };
+    }
+  }catch(e){}
+  return JSON.parse(JSON.stringify(REKAP_DEFAULT));
+}
+function saveRekapCfg(){
+  try{ localStorage.setItem(REKAP_KEY, JSON.stringify(rekapCfg)); }catch(e){}
+}
+function formatPeriodeID(d1, d2){
+  if(!d1 || !d2 || isNaN(d1.getTime()) || isNaN(d2.getTime())) return "";
+  if(d1 > d2){ const t = d1; d1 = d2; d2 = t; }
+  const sameYear = d1.getFullYear() === d2.getFullYear();
+  const sameMonth = sameYear && d1.getMonth() === d2.getMonth();
+  if(sameMonth) return d1.getDate() + " - " + d2.getDate() + " " + MONTHS_FULL_ID[d2.getMonth()] + " " + d2.getFullYear();
+  if(sameYear) return d1.getDate() + " " + MONTHS_FULL_ID[d1.getMonth()] + " - " + d2.getDate() + " " + MONTHS_FULL_ID[d2.getMonth()] + " " + d2.getFullYear();
+  return d1.getDate() + " " + MONTHS_FULL_ID[d1.getMonth()] + " " + d1.getFullYear() + " - " + d2.getDate() + " " + MONTHS_FULL_ID[d2.getMonth()] + " " + d2.getFullYear();
+}
+
+/* satu staff -> baris-baris rekap (digabung per outlet) */
+function rekapBuildRows(list){
+  const sorted = list.slice().sort((a, b) => {
+    const da = parseFlexibleDate(a.tanggalNota), db = parseFlexibleDate(b.tanggalNota);
+    return (isNaN(da.getTime()) ? 0 : da.getTime()) - (isNaN(db.getTime()) ? 0 : db.getTime());
+  });
+  const rows = [];
+  const byOutlet = {};
+  const newRow = (kode, lokasi) => ({ kode: kode, lokasi: lokasi, ket: [], amt: [0,0,0,0,0,0,0] });
+  sorted.forEach(e => {
+    const col = REKAP_CAT_COL[e.kategori] !== undefined ? REKAP_CAT_COL[e.kategori] : 6;
+    const note = (e.keterangan || "").trim();
+    let label;
+    if(e.kategori === "BBM" || e.kategori === "Parkir") label = e.kategori;
+    else if(e.kategori === "Transportasi Umum") label = "Biaya Transportasi";
+    else label = note || e.kategori;
+    let row;
+    if(e.kodeOutlet){
+      row = byOutlet[e.kodeOutlet];
+      if(!row){ row = newRow(e.kodeOutlet, e.titikLokasi || ""); byOutlet[e.kodeOutlet] = row; rows.push(row); }
+    } else {
+      row = newRow("", note || e.titikLokasi || "-");
+      rows.push(row);
+    }
+    row.amt[col] += Number(e.nominal) || 0;
+    if(row.ket.indexOf(label) === -1) row.ket.push(label);
+  });
+  const prio = k => (k === "BBM" ? 0 : k === "Parkir" ? 1 : 2);
+  rows.forEach(r => { r.ket = r.ket.map((k, i) => ({ k: k, i: i })).sort((a, b) => prio(a.k) - prio(b.k) || a.i - b.i).map(x => x.k); });
+  return rows;
+}
+
+function rekapFillSheet(ws, head, blocks){
+  const MONEY = '_-* #,##0_-;\\-* #,##0_-;_-* "-"??_-;_-@_-';
+  const thin = { style: "thin" };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
+  [28, 12, 46, 34, 13, 14, 13, 13, 13, 15, 13, 15, 22].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+  [["Periode ", ": " + head.periode], ["Nomor ", ": " + head.nomor], ["Bank ", ": " + head.bank]].forEach((p, i) => {
+    ws.getCell(2 + i, 1).value = p[0];
+    ws.getCell(2 + i, 1).alignment = { horizontal: "center" };
+    ws.getCell(2 + i, 3).value = p[1];
+  });
+
+  ["Nama Staf", "Kode Outlet", "Lokasi", "Keterangan"].concat(REKAP_COL_NAMES, ["Total", "No Rekening"]).forEach((h, i) => {
+    const c = ws.getCell(6, i + 1);
+    c.value = h; c.font = { bold: true };
+    c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    c.border = border;
+  });
+  ws.getRow(6).height = 27;
+
+  const colL = c => String.fromCharCode(64 + c);
+  let r = 7;
+  const subtotalRows = [];
+  let grand = 0;
+
+  blocks.forEach(b => {
+    const first = r;
+    const colSums = [0,0,0,0,0,0,0];
+    b.rows.forEach(row => {
+      const rowTotal = row.amt.reduce((a, x) => a + x, 0);
+      ws.getCell(r, 1).value = b.nama;
+      ws.getCell(r, 2).value = row.kode;
+      ws.getCell(r, 3).value = row.lokasi;
+      ws.getCell(r, 4).value = row.ket.join(", ");
+      row.amt.forEach((v, i) => {
+        colSums[i] += v;
+        if(v > 0) ws.getCell(r, 5 + i).value = v;
+      });
+      ws.getCell(r, 12).value = { formula: "SUM(E" + r + ":K" + r + ")", result: rowTotal };
+      for(let c = 1; c <= 13; c++){
+        const cell = ws.getCell(r, c);
+        cell.border = border;
+        if(c >= 5 && c <= 12) cell.numFmt = MONEY;
+        if(c === 1 || c === 2) cell.alignment = { horizontal: "center", vertical: "middle" };
+        if(c === 3 || c === 4) cell.alignment = { vertical: "middle", wrapText: true };
+      }
+      r++;
+    });
+    const last = r - 1;
+    const staffTotal = colSums.reduce((a, x) => a + x, 0);
+    ws.getCell(r, 1).value = b.nama;
+    for(let c = 5; c <= 11; c++){
+      ws.getCell(r, c).value = { formula: "SUM(" + colL(c) + first + ":" + colL(c) + last + ")", result: colSums[c - 5] };
+    }
+    ws.getCell(r, 12).value = { formula: "SUM(L" + first + ":L" + last + ")", result: staffTotal };
+    for(let c = 1; c <= 13; c++){
+      const cell = ws.getCell(r, c);
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
+      cell.border = border;
+      cell.font = { bold: true };
+      if(c >= 5 && c <= 12) cell.numFmt = MONEY;
+      if(c === 1) cell.alignment = { horizontal: "center" };
+    }
+    subtotalRows.push(r);
+    grand += staffTotal;
+    r++;
+  });
+
+  ws.mergeCells(r, 5, r, 11);
+  const tl = ws.getCell(r, 5);
+  tl.value = "TOTAL KESELURUHAN";
+  tl.font = { bold: true, size: 14 };
+  tl.alignment = { horizontal: "center", vertical: "middle" };
+  for(let c = 5; c <= 12; c++) ws.getCell(r, c).border = border;
+  const gt = ws.getCell(r, 12);
+  gt.value = { formula: subtotalRows.map(x => "L" + x).join("+"), result: grand };
+  gt.font = { bold: true, size: 12 };
+  gt.numFmt = MONEY;
+  ws.getRow(r).height = 22;
+
+  const sr = r + 2;
+  [3, 6, 10].forEach((col, i) => {
+    const s = REKAP_SIGN[i];
+    const a = ws.getCell(sr, col);        a.value = s.label;  a.font = { bold: true }; a.alignment = { horizontal: "center" };
+    const n = ws.getCell(sr + 8, col);    n.value = s.nama;   n.font = { bold: true, size: 12 }; n.alignment = { horizontal: "center" };
+    const j = ws.getCell(sr + 9, col);    j.value = s.jabatan; j.alignment = { horizontal: "center" };
+  });
+
+  ws.views = [{ state: "frozen", ySplit: 6, zoomScale: 85 }];
+  ws.pageSetup = { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+}
+
+function rekapBuildWorkbook(ExcelJSLib, list, cfg){
+  const wb = new ExcelJSLib.Workbook();
+  const byStaff = {};
+  list.forEach(e => {
+    const n = (e.namaLengkap || "").trim() || "Tanpa Nama";
+    (byStaff[n] = byStaff[n] || []).push(e);
+  });
+  const groupIds = new Set(cfg.groups.map(g => g.id));
+  const bucket = {};
+  Object.keys(byStaff).sort((a, b) => a.localeCompare(b)).forEach(n => {
+    const gid = groupIds.has(cfg.assign[n]) ? cfg.assign[n] : "_none";
+    (bucket[gid] = bucket[gid] || []).push(n);
+  });
+  const used = new Set();
+  let sheets = 0;
+  cfg.groups.concat([{ id: "_none", bank: "-", suffix: "", kelompok: "", unassigned: true }]).forEach(g => {
+    const names = bucket[g.id];
+    if(!names || !names.length) return;
+    const nomor = g.unassigned ? "-" : (cfg.nomorDasar + g.suffix + "/PR/" + cfg.bulanTahun + (g.kelompok ? "  ( " + g.kelompok + " )" : ""));
+    const title = g.unassigned ? "Belum diatur" : (cfg.nomorDasar + g.suffix + " (" + g.bank + (g.kelompok ? " - " + g.kelompok : "") + ")");
+    const ws = wb.addWorksheet(sanitizeSheetName(title, used));
+    const blocks = names.map(n => ({ nama: n, rows: rekapBuildRows(byStaff[n]) }));
+    rekapFillSheet(ws, { periode: cfg.periode, nomor: nomor, bank: g.bank }, blocks);
+    sheets++;
+  });
+  return { workbook: wb, sheets: sheets, unassigned: (bucket._none || []).length };
+}
+
+/* ----- tampilan (jendela pengaturan) ----- */
+function renderRekapGroups(){
+  const box = document.getElementById("rekapGroups");
+  box.innerHTML = rekapCfg.groups.map((g, i) => `
+    <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; align-items:center;">
+      <input class="filter-select" data-rk="bank" data-i="${i}" value="${esc(g.bank)}" placeholder="Bank" style="width:120px;" />
+      <input class="filter-select" data-rk="suffix" data-i="${i}" value="${esc(g.suffix)}" placeholder="Akhiran nomor" style="width:110px;" />
+      <input class="filter-select" data-rk="kelompok" data-i="${i}" value="${esc(g.kelompok)}" placeholder="Kelompok (opsional)" style="width:170px;" />
+      <button type="button" class="delete-btn" data-rk-del="${i}" title="Hapus kelompok">&#128465;</button>
+    </div>`).join("");
+}
+function renderRekapStaff(){
+  const list = getFiltered();
+  const totals = {};
+  list.forEach(e => {
+    const n = (e.namaLengkap || "").trim() || "Tanpa Nama";
+    totals[n] = (totals[n] || 0) + (Number(e.nominal) || 0);
+  });
+  rekapStaffNames = Object.keys(totals).sort((a, b) => a.localeCompare(b));
+  const opts = selected => `<option value="">- belum diatur -</option>` + rekapCfg.groups.map(g =>
+    `<option value="${esc(g.id)}"${g.id === selected ? " selected" : ""}>${esc((rekapCfg.nomorDasar || "") + g.suffix + " - " + (g.bank || "?") + (g.kelompok ? " (" + g.kelompok + ")" : ""))}</option>`
+  ).join("");
+  document.getElementById("rekapStaffList").innerHTML = rekapStaffNames.map((n, i) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #E7EEF6;">
+      <span style="font-size:13px; flex:1; min-width:0;">${esc(n)} <span style="color:#66748C; font-size:12px;">${formatRupiah(totals[n])}</span></span>
+      <select class="filter-select" data-rk-staff="${i}" style="max-width:220px;">${opts(rekapCfg.assign[n])}</select>
+    </div>`).join("");
+  const total = list.reduce((s, e) => s + (Number(e.nominal) || 0), 0);
+  document.getElementById("rekapSummary").textContent = list.length + " klaim, " + rekapStaffNames.length + " staff, total " + formatRupiah(total);
+}
+function openRekap(){
+  const list = getFiltered();
+  if(list.length === 0){
+    showToast("Tidak ada data. Muat data dari Google Sheets dan atur filter dulu", true);
+    return;
+  }
+  rekapCfg = loadRekapCfg();
+  let d1 = null, d2 = null;
+  if(filterTglMulai && filterTglSampai){
+    d1 = new Date(filterTglMulai); d2 = new Date(filterTglSampai);
+  } else {
+    const ds = list.map(e => parseFlexibleDate(e.tanggalUpload)).filter(d => !isNaN(d.getTime())).sort((a, b) => a - b);
+    if(ds.length){ d1 = ds[0]; d2 = ds[ds.length - 1]; }
+  }
+  const endD = d2 && !isNaN(d2.getTime()) ? d2 : new Date();
+  document.getElementById("rekapPeriode").value = formatPeriodeID(d1, d2);
+  document.getElementById("rekapNomorDasar").value = rekapCfg.nomorDasar;
+  document.getElementById("rekapBulanTahun").value = ROMAN_MONTH[endD.getMonth()] + "/" + endD.getFullYear();
+  renderRekapGroups();
+  renderRekapStaff();
+  document.getElementById("rekapOverlay").classList.remove("hidden");
+}
+function closeRekap(){
+  document.getElementById("rekapOverlay").classList.add("hidden");
+}
+async function handleRekapDownload(){
+  if(typeof ExcelJS === "undefined"){ showToast("Library ExcelJS gagal dimuat, cek koneksi internet", true); return; }
+  const list = getFiltered();
+  if(list.length === 0){ showToast("Tidak ada data untuk direkap", true); return; }
+  const cfg = {
+    periode: document.getElementById("rekapPeriode").value.trim(),
+    nomorDasar: document.getElementById("rekapNomorDasar").value.trim(),
+    bulanTahun: document.getElementById("rekapBulanTahun").value.trim(),
+    groups: rekapCfg.groups,
+    assign: rekapCfg.assign || {}
+  };
+  const btn = document.getElementById("rekapDownloadBtn");
+  const original = btn.innerHTML;
+  btn.innerHTML = "Menyiapkan file...";
+  btn.disabled = true;
+  try{
+    const res = rekapBuildWorkbook(ExcelJS, list, cfg);
+    const buffer = await res.workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "rekap-final-" + (cfg.periode.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || todayISO()) + ".xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Rekap final diunduh (" + res.sheets + " sheet)" + (res.unassigned ? ". " + res.unassigned + " staff belum diatur, ada di sheet 'Belum diatur'" : ""));
+  }catch(err){
+    console.error(err);
+    showToast("Gagal membuat rekap: " + err.message, true);
+  }finally{
+    btn.innerHTML = original;
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener("click", ev => {
+  const t = ev.target;
+  if(!t || !t.closest) return;
+  if(t.closest("#rekapBtn")){ openRekap(); return; }
+  if(t.closest("#rekapCloseBtn")){ closeRekap(); return; }
+  if(t.closest("#rekapDownloadBtn")){ handleRekapDownload(); return; }
+  if(!rekapCfg) return;
+  if(t.closest("#rekapAddGroupBtn")){
+    rekapCfg.groups.push({ id: "g" + Date.now(), bank: "", suffix: "", kelompok: "" });
+    saveRekapCfg(); renderRekapGroups(); renderRekapStaff();
+    return;
+  }
+  const del = t.closest("[data-rk-del]");
+  if(del){
+    rekapCfg.groups.splice(Number(del.getAttribute("data-rk-del")), 1);
+    saveRekapCfg(); renderRekapGroups(); renderRekapStaff();
+  }
+});
+document.addEventListener("input", ev => {
+  const t = ev.target;
+  if(!t || !t.getAttribute || !rekapCfg) return;
+  const k = t.getAttribute("data-rk");
+  if(k){
+    const g = rekapCfg.groups[Number(t.getAttribute("data-i"))];
+    if(g){ g[k] = t.value; saveRekapCfg(); renderRekapStaff(); }
+    return;
+  }
+  if(t.id === "rekapNomorDasar"){ rekapCfg.nomorDasar = t.value.trim(); saveRekapCfg(); renderRekapStaff(); }
+});
+document.addEventListener("change", ev => {
+  const t = ev.target;
+  if(!t || !t.getAttribute || !rekapCfg || !t.hasAttribute("data-rk-staff")) return;
+  const name = rekapStaffNames[Number(t.getAttribute("data-rk-staff"))];
+  if(!name) return;
+  if(t.value) rekapCfg.assign[name] = t.value; else delete rekapCfg.assign[name];
+  saveRekapCfg();
 });
 /* ===== wire up events ===== */
 function initEvents(){
