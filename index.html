@@ -2363,40 +2363,6 @@ document.addEventListener("click", ev => {
 document.addEventListener("change", ev => {
   if(ev.target && ev.target.id === "dupOnlyDiff") renderDupResults();
 });
-  async function handleRekapFromSheet(){
-  if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")){
-    showToast("URL Apps Script belum diatur", true); return;
-  }
-  const btn = document.getElementById("rekapBtn");
-  const original = btn.innerHTML;
-  btn.innerHTML = "Menyiapkan rekap...";
-  btn.disabled = true;
-  try{
-    const res = await fetch(WEBAPP_URL + "?action=exportRekap&t=" + Date.now());
-    const json = await res.json();
-    if(json.status !== "ok") throw new Error(json.message || "Gagal membuat rekap");
-
-    const bin = atob(json.base64);
-    const bytes = new Uint8Array(bin.length);
-    for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = json.fileName || ("rekap-final-" + todayISO() + ".xlsx");
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast("Rekap Final diunduh dari sheet 'Rekap Final'");
-  }catch(err){
-    console.error(err);
-    showToast("Gagal: " + err.message, true);
-  }finally{
-    btn.innerHTML = original;
-    btn.disabled = false;
-  }
-}
   /* ===== rekap final ===== */
 const REKAP_KEY = "reimburse_rekap_v1";
 const REKAP_SIGN = [
@@ -2694,7 +2660,7 @@ async function handleRekapDownload(){
 document.addEventListener("click", ev => {
   const t = ev.target;
   if(!t || !t.closest) return;
-  if(t.closest("#rekapBtn")){ handleRekapFromSheet(); return; }
+  if(t.closest("#rekapBtn")){ openRekap(); return; }
   if(t.closest("#rekapCloseBtn")){ closeRekap(); return; }
   if(t.closest("#rekapDownloadBtn")){ handleRekapDownload(); return; }
   if(!rekapCfg) return;
