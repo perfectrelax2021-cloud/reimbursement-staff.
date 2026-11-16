@@ -1450,16 +1450,22 @@ function parseNominal(str){
   return Number(cleaned) || 0;
 }
 async function fetchAndSetEntriesFromSheet(){
-  function entriesFromRows(rows){
+  if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
+    throw new Error("URL Google Sheets belum diatur, hubungi pembuat aplikasi");
+  }
+  const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
+  if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
+  const text = await res.text();
+  const rows = parseCSV(text);
   if(rows.length < 2){ throw new Error("Data di Google Sheets kosong"); }
 
   let headerRowIdx = rows.findIndex(r =>
-    r.some(cell => String(cell).trim().toLowerCase().includes("nama lengkap")) &&
-    r.some(cell => String(cell).trim().toLowerCase().includes("timestamp"))
+    r.some(cell => cell.trim().toLowerCase().includes("nama lengkap")) &&
+    r.some(cell => cell.trim().toLowerCase().includes("timestamp"))
   );
   if(headerRowIdx === -1) headerRowIdx = 0;
 
-  const header = rows[headerRowIdx].map(h => String(h).trim().toLowerCase());
+  const header = rows[headerRowIdx].map(h => h.trim().toLowerCase());
   const idx = {
     timestamp: header.findIndex(h => h.includes("timestamp")),
     nota: header.findIndex(h => h.includes("nota claim")),
@@ -1476,50 +1482,32 @@ async function fetchAndSetEntriesFromSheet(){
     throw new Error("Format kolom di Google Sheets tidak dikenali, hubungi pembuat aplikasi");
   }
 
-  return rows.slice(headerRowIdx + 1)
-    .filter(r => r.some(cell => cell && String(cell).trim() !== ""))
+  const loaded = rows.slice(headerRowIdx + 1)
+    .filter(r => r.some(cell => cell && cell.trim() !== ""))
     .map((r, i) => {
-      const timestampRaw = idx.timestamp >= 0 ? String(r[idx.timestamp] || "").trim() : "";
+      const timestampRaw = idx.timestamp >= 0 ? (r[idx.timestamp] || "").trim() : "";
       const tanggalUpload = timestampRaw ? timestampRaw.split(" ")[0] : "";
-      const notaRaw = idx.nota >= 0 ? String(r[idx.nota] || "").trim() : "";
+      const notaRaw = idx.nota >= 0 ? (r[idx.nota] || "").trim() : "";
       const driveIdMatch = notaRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
       const notaImageUrl = driveIdMatch ? `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w1200` : "";
       return {
         id: "sheet-" + i + "-" + (timestampRaw || i),
         tanggalUpload: tanggalUpload,
         createdAt: timestampRaw ? timestampRaw.replace(" ", "T") : "",
-        namaLengkap: idx.nama >= 0 ? String(r[idx.nama] || "").trim() : "",
-        kategori: idx.kategori >= 0 ? String(r[idx.kategori] || "").trim() : "",
-        titikLokasi: idx.lokasi >= 0 ? String(r[idx.lokasi] || "").trim() : "",
-        kodeOutlet: idx.outlet >= 0 ? String(r[idx.outlet] || "").trim() : "",
-        tanggalNota: idx.tanggalNota >= 0 ? String(r[idx.tanggalNota] || "").trim() : "",
+        namaLengkap: idx.nama >= 0 ? (r[idx.nama] || "").trim() : "",
+        kategori: idx.kategori >= 0 ? (r[idx.kategori] || "").trim() : "",
+        titikLokasi: idx.lokasi >= 0 ? (r[idx.lokasi] || "").trim() : "",
+        kodeOutlet: idx.outlet >= 0 ? (r[idx.outlet] || "").trim() : "",
+        tanggalNota: idx.tanggalNota >= 0 ? (r[idx.tanggalNota] || "").trim() : "",
         nominal: idx.nominal >= 0 ? parseNominal(r[idx.nominal]) : 0,
         notaBukti: notaImageUrl,
         notaNamaFile: notaRaw,
-        keterangan: idx.keterangan >= 0 ? String(r[idx.keterangan] || "").trim() : "",
+        keterangan: idx.keterangan >= 0 ? (r[idx.keterangan] || "").trim() : "",
       };
     });
-}
 
-async function fetchAndSetEntriesFromSheet(){
-  if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
-    throw new Error("URL Google Sheets belum diatur, hubungi pembuat aplikasi");
-  }
-  const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
-  if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
-  const text = await res.text();
-  entries = entriesFromRows(parseCSV(text));
-  return entries.length;
-}
-
-async function fetchRekapSourceEntries(){
-  if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")){
-    throw new Error("URL Apps Script belum diatur");
-  }
-  const res = await fetch(WEBAPP_URL + "?action=getRekapSource&t=" + Date.now());
-  const json = await res.json();
-  if(json.status !== "ok") throw new Error(json.message || "Gagal membaca sheet rekap");
-  return entriesFromRows(json.rows);
+  entries = loaded;
+  return loaded.length;
 }
 
 async function handleLoadFromSheet(){
@@ -1718,9 +1706,8 @@ function renderLedger(){
     });
   });
 }
-function getFiltered(src){
-  const base = src || entries;
-  let list = filterKategori ? base.filter(e => e.kategori === filterKategori) : base;
+function getFilteredStatus(){
+  let list = sFilterKategori ? entries.filter(e => e.kategori === sFilterKategori) : entries;
   if(sFilterNama.trim()){
     const q = sFilterNama.trim().toLowerCase();
     list = list.filter(e => (e.namaLengkap || "").toLowerCase().includes(q));
@@ -2590,7 +2577,7 @@ function renderRekapGroups(){
     </div>`).join("");
 }
 function renderRekapStaff(){
- const list = rekapList();
+  const list = getFiltered();
   const totals = {};
   list.forEach(e => {
     const n = (e.namaLengkap || "").trim() || "Tanpa Nama";
@@ -2609,28 +2596,9 @@ function renderRekapStaff(){
   document.getElementById("rekapSummary").textContent = list.length + " klaim, " + rekapStaffNames.length + " staff, total " + formatRupiah(total);
 }
 function openRekap(){
-  let rekapEntries = null;
-function rekapList(){ return getFiltered(rekapEntries || entries); }
-
-async function openRekap(){
-  const btn = document.getElementById("rekapBtn");
-  const original = btn.innerHTML;
-  btn.innerHTML = "Memuat data rekap...";
-  btn.disabled = true;
-  try{
-    rekapEntries = await fetchRekapSourceEntries();
-  }catch(err){
-    console.error(err);
-    showToast("Gagal memuat sheet rekap: " + err.message, true);
-    return;
-  }finally{
-    btn.innerHTML = original;
-    btn.disabled = false;
-  }
-
-  const list = rekapList();
+  const list = getFiltered();
   if(list.length === 0){
-    showToast("Tidak ada data di sheet Rekap Final Reimbursement (cek juga filter di atas)", true);
+    showToast("Tidak ada data. Muat data dari Google Sheets dan atur filter dulu", true);
     return;
   }
   rekapCfg = loadRekapCfg();
@@ -2654,7 +2622,7 @@ function closeRekap(){
 }
 async function handleRekapDownload(){
   if(typeof ExcelJS === "undefined"){ showToast("Library ExcelJS gagal dimuat, cek koneksi internet", true); return; }
-  const list = rekapList();
+  const list = getFiltered();
   if(list.length === 0){ showToast("Tidak ada data untuk direkap", true); return; }
   const cfg = {
     periode: document.getElementById("rekapPeriode").value.trim(),
@@ -2850,216 +2818,7 @@ async function loadDynamicOutlets(){
 function getAllOutlets(){
   return OUTLETS.concat(DYNAMIC_OUTLETS);
 }
-  /* ===== REKAP FINAL: ambil data dari tab "Rekap Final Reimbursement" ===== */
-
-function entriesFromRows(rows){
-  if(rows.length < 2){ throw new Error("Data di Google Sheets kosong"); }
-
-  let headerRowIdx = rows.findIndex(r =>
-    r.some(cell => String(cell).trim().toLowerCase().includes("nama lengkap")) &&
-    r.some(cell => String(cell).trim().toLowerCase().includes("timestamp"))
-  );
-  if(headerRowIdx === -1) headerRowIdx = 0;
-
-  const header = rows[headerRowIdx].map(h => String(h).trim().toLowerCase());
-  const idx = {
-    timestamp: header.findIndex(h => h.includes("timestamp")),
-    nota: header.findIndex(h => h.includes("nota claim")),
-    nama: header.findIndex(h => h.includes("nama lengkap")),
-    kategori: header.findIndex(h => h.includes("kategori")),
-    lokasi: header.findIndex(h => h.includes("titik lokasi")),
-    tanggalNota: header.findIndex(h => h.includes("tanggal nota")),
-    nominal: header.findIndex(h => h.includes("nominal")),
-    keterangan: header.findIndex(h => h.includes("keterangan")),
-    outlet: header.findIndex(h => h.includes("kode outlet")),
-  };
-
-  if(idx.nama === -1 || idx.timestamp === -1){
-    throw new Error("Format kolom di Google Sheets tidak dikenali, hubungi pembuat aplikasi");
-  }
-
-  return rows.slice(headerRowIdx + 1)
-    .filter(r => r.some(cell => cell && String(cell).trim() !== ""))
-    .map((r, i) => {
-      const timestampRaw = idx.timestamp >= 0 ? String(r[idx.timestamp] || "").trim() : "";
-      const tanggalUpload = timestampRaw ? timestampRaw.split(" ")[0] : "";
-      const notaRaw = idx.nota >= 0 ? String(r[idx.nota] || "").trim() : "";
-      const driveIdMatch = notaRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
-      const notaImageUrl = driveIdMatch ? `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w1200` : "";
-      return {
-        id: "sheet-" + i + "-" + (timestampRaw || i),
-        tanggalUpload: tanggalUpload,
-        createdAt: timestampRaw ? timestampRaw.replace(" ", "T") : "",
-        namaLengkap: idx.nama >= 0 ? String(r[idx.nama] || "").trim() : "",
-        kategori: idx.kategori >= 0 ? String(r[idx.kategori] || "").trim() : "",
-        titikLokasi: idx.lokasi >= 0 ? String(r[idx.lokasi] || "").trim() : "",
-        kodeOutlet: idx.outlet >= 0 ? String(r[idx.outlet] || "").trim() : "",
-        tanggalNota: idx.tanggalNota >= 0 ? String(r[idx.tanggalNota] || "").trim() : "",
-        nominal: idx.nominal >= 0 ? parseNominal(r[idx.nominal]) : 0,
-        notaBukti: notaImageUrl,
-        notaNamaFile: notaRaw,
-        keterangan: idx.keterangan >= 0 ? String(r[idx.keterangan] || "").trim() : "",
-      };
-    });
-}
-
-async function fetchAndSetEntriesFromSheet(){
-  if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
-    throw new Error("URL Google Sheets belum diatur, hubungi pembuat aplikasi");
-  }
-  const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
-  if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
-  const text = await res.text();
-  entries = entriesFromRows(parseCSV(text));
-  return entries.length;
-}
-
-async function fetchRekapSourceEntries(){
-  if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")){
-    throw new Error("URL Apps Script belum diatur");
-  }
-  const res = await fetch(WEBAPP_URL + "?action=getRekapSource&t=" + Date.now());
-  const json = await res.json();
-  if(json.status !== "ok") throw new Error(json.message || "Gagal membaca sheet rekap");
-  return entriesFromRows(json.rows);
-}
-
-function getFiltered(src){
-  const base = src || entries;
-  let list = filterKategori ? base.filter(e => e.kategori === filterKategori) : base;
-  if(filterNama.trim()){
-    const q = filterNama.trim().toLowerCase();
-    list = list.filter(e => (e.namaLengkap || "").toLowerCase().includes(q));
-  }
-  if(filterTglMulai){
-    const startD = new Date(filterTglMulai);
-    list = list.filter(e => {
-      const d = parseFlexibleDate(e[filterTglJenis]);
-      return !isNaN(d.getTime()) && d >= startD;
-    });
-  }
-  if(filterTglSampai){
-    const endD = new Date(filterTglSampai);
-    endD.setHours(23,59,59,999);
-    list = list.filter(e => {
-      const d = parseFlexibleDate(e[filterTglJenis]);
-      return !isNaN(d.getTime()) && d <= endD;
-    });
-  }
-  list = [...list];
-  if(sortBy === "nama"){
-    list.sort((a, b) => (a.namaLengkap || "").localeCompare(b.namaLengkap || ""));
-  } else {
-    list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-  }
-  return list;
-}
-
-let rekapEntries = null;
-function rekapList(){ return getFiltered(rekapEntries || entries); }
-
-async function openRekap(){
-  const btn = document.getElementById("rekapBtn");
-  const original = btn.innerHTML;
-  btn.innerHTML = "Memuat data rekap...";
-  btn.disabled = true;
-  try{
-    rekapEntries = await fetchRekapSourceEntries();
-  }catch(err){
-    console.error(err);
-    showToast("Gagal memuat sheet rekap: " + err.message, true);
-    return;
-  }finally{
-    btn.innerHTML = original;
-    btn.disabled = false;
-  }
-
-  const list = rekapList();
-  if(list.length === 0){
-    showToast("Tidak ada data di sheet Rekap Final Reimbursement (cek juga filter di atas)", true);
-    return;
-  }
-  rekapCfg = loadRekapCfg();
-  let d1 = null, d2 = null;
-  if(filterTglMulai && filterTglSampai){
-    d1 = new Date(filterTglMulai); d2 = new Date(filterTglSampai);
-  } else {
-    const ds = list.map(e => parseFlexibleDate(e.tanggalUpload)).filter(d => !isNaN(d.getTime())).sort((a, b) => a - b);
-    if(ds.length){ d1 = ds[0]; d2 = ds[ds.length - 1]; }
-  }
-  const endD = d2 && !isNaN(d2.getTime()) ? d2 : new Date();
-  document.getElementById("rekapPeriode").value = formatPeriodeID(d1, d2);
-  document.getElementById("rekapNomorDasar").value = rekapCfg.nomorDasar;
-  document.getElementById("rekapBulanTahun").value = ROMAN_MONTH[endD.getMonth()] + "/" + endD.getFullYear();
-  renderRekapGroups();
-  renderRekapStaff();
-  document.getElementById("rekapOverlay").classList.remove("hidden");
-}
-
-function renderRekapStaff(){
-  const list = rekapList();
-  const totals = {};
-  list.forEach(e => {
-    const n = (e.namaLengkap || "").trim() || "Tanpa Nama";
-    totals[n] = (totals[n] || 0) + (Number(e.nominal) || 0);
-  });
-  rekapStaffNames = Object.keys(totals).sort((a, b) => a.localeCompare(b));
-  const opts = selected => `<option value="">- belum diatur -</option>` + rekapCfg.groups.map(g =>
-    `<option value="${esc(g.id)}"${g.id === selected ? " selected" : ""}>${esc((rekapCfg.nomorDasar || "") + g.suffix + " - " + (g.bank || "?") + (g.kelompok ? " (" + g.kelompok + ")" : ""))}</option>`
-  ).join("");
-  document.getElementById("rekapStaffList").innerHTML = rekapStaffNames.map((n, i) => `
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #E7EEF6;">
-      <span style="font-size:13px; flex:1; min-width:0;">${esc(n)} <span style="color:#66748C; font-size:12px;">${formatRupiah(totals[n])}</span></span>
-      <select class="filter-select" data-rk-staff="${i}" style="max-width:220px;">${opts(rekapCfg.assign[n])}</select>
-    </div>`).join("");
-  const total = list.reduce((s, e) => s + (Number(e.nominal) || 0), 0);
-  document.getElementById("rekapSummary").textContent = list.length + " klaim, " + rekapStaffNames.length + " staff, total " + formatRupiah(total);
-}
-
-async function handleRekapDownload(){
-  if(typeof ExcelJS === "undefined"){ showToast("Library ExcelJS gagal dimuat, cek koneksi internet", true); return; }
-  const list = rekapList();
-  if(list.length === 0){ showToast("Tidak ada data untuk direkap", true); return; }
-  const cfg = {
-    periode: document.getElementById("rekapPeriode").value.trim(),
-    nomorDasar: document.getElementById("rekapNomorDasar").value.trim(),
-    bulanTahun: document.getElementById("rekapBulanTahun").value.trim(),
-    groups: rekapCfg.groups,
-    assign: rekapCfg.assign || {}
-  };
-  const btn = document.getElementById("rekapDownloadBtn");
-  const original = btn.innerHTML;
-  btn.innerHTML = "Menyiapkan file...";
-  btn.disabled = true;
-  try{
-    const res = rekapBuildWorkbook(ExcelJS, list, cfg);
-    const buffer = await res.workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "rekap-final-" + (cfg.periode.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || todayISO()) + ".xlsx";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast("Rekap final diunduh (" + res.sheets + " sheet)" + (res.unassigned ? ". " + res.unassigned + " staff belum diatur, ada di sheet 'Belum diatur'" : ""));
-  }catch(err){
-    console.error(err);
-    showToast("Gagal membuat rekap: " + err.message, true);
-  }finally{
-    btn.innerHTML = original;
-    btn.disabled = false;
-  }
-}function getAllOutlets(){
-  return OUTLETS.concat(DYNAMIC_OUTLETS);
-}
-
-/* ===== REKAP FINAL: ambil data dari tab ... ===== */
-... (blok di atas) ...
-}
-
-boot();
+  boot();
 </script>
 </body>
 </html>
