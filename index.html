@@ -1450,22 +1450,16 @@ function parseNominal(str){
   return Number(cleaned) || 0;
 }
 async function fetchAndSetEntriesFromSheet(){
-  if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
-    throw new Error("URL Google Sheets belum diatur, hubungi pembuat aplikasi");
-  }
-  const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
-  if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
-  const text = await res.text();
-  const rows = parseCSV(text);
+  function entriesFromRows(rows){
   if(rows.length < 2){ throw new Error("Data di Google Sheets kosong"); }
 
   let headerRowIdx = rows.findIndex(r =>
-    r.some(cell => cell.trim().toLowerCase().includes("nama lengkap")) &&
-    r.some(cell => cell.trim().toLowerCase().includes("timestamp"))
+    r.some(cell => String(cell).trim().toLowerCase().includes("nama lengkap")) &&
+    r.some(cell => String(cell).trim().toLowerCase().includes("timestamp"))
   );
   if(headerRowIdx === -1) headerRowIdx = 0;
 
-  const header = rows[headerRowIdx].map(h => h.trim().toLowerCase());
+  const header = rows[headerRowIdx].map(h => String(h).trim().toLowerCase());
   const idx = {
     timestamp: header.findIndex(h => h.includes("timestamp")),
     nota: header.findIndex(h => h.includes("nota claim")),
@@ -1482,32 +1476,50 @@ async function fetchAndSetEntriesFromSheet(){
     throw new Error("Format kolom di Google Sheets tidak dikenali, hubungi pembuat aplikasi");
   }
 
-  const loaded = rows.slice(headerRowIdx + 1)
-    .filter(r => r.some(cell => cell && cell.trim() !== ""))
+  return rows.slice(headerRowIdx + 1)
+    .filter(r => r.some(cell => cell && String(cell).trim() !== ""))
     .map((r, i) => {
-      const timestampRaw = idx.timestamp >= 0 ? (r[idx.timestamp] || "").trim() : "";
+      const timestampRaw = idx.timestamp >= 0 ? String(r[idx.timestamp] || "").trim() : "";
       const tanggalUpload = timestampRaw ? timestampRaw.split(" ")[0] : "";
-      const notaRaw = idx.nota >= 0 ? (r[idx.nota] || "").trim() : "";
+      const notaRaw = idx.nota >= 0 ? String(r[idx.nota] || "").trim() : "";
       const driveIdMatch = notaRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
       const notaImageUrl = driveIdMatch ? `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w1200` : "";
       return {
         id: "sheet-" + i + "-" + (timestampRaw || i),
         tanggalUpload: tanggalUpload,
         createdAt: timestampRaw ? timestampRaw.replace(" ", "T") : "",
-        namaLengkap: idx.nama >= 0 ? (r[idx.nama] || "").trim() : "",
-        kategori: idx.kategori >= 0 ? (r[idx.kategori] || "").trim() : "",
-        titikLokasi: idx.lokasi >= 0 ? (r[idx.lokasi] || "").trim() : "",
-        kodeOutlet: idx.outlet >= 0 ? (r[idx.outlet] || "").trim() : "",
-        tanggalNota: idx.tanggalNota >= 0 ? (r[idx.tanggalNota] || "").trim() : "",
+        namaLengkap: idx.nama >= 0 ? String(r[idx.nama] || "").trim() : "",
+        kategori: idx.kategori >= 0 ? String(r[idx.kategori] || "").trim() : "",
+        titikLokasi: idx.lokasi >= 0 ? String(r[idx.lokasi] || "").trim() : "",
+        kodeOutlet: idx.outlet >= 0 ? String(r[idx.outlet] || "").trim() : "",
+        tanggalNota: idx.tanggalNota >= 0 ? String(r[idx.tanggalNota] || "").trim() : "",
         nominal: idx.nominal >= 0 ? parseNominal(r[idx.nominal]) : 0,
         notaBukti: notaImageUrl,
         notaNamaFile: notaRaw,
-        keterangan: idx.keterangan >= 0 ? (r[idx.keterangan] || "").trim() : "",
+        keterangan: idx.keterangan >= 0 ? String(r[idx.keterangan] || "").trim() : "",
       };
     });
+}
 
-  entries = loaded;
-  return loaded.length;
+async function fetchAndSetEntriesFromSheet(){
+  if(!SHEET_CSV_URL || !SHEET_CSV_URL.startsWith("http")){
+    throw new Error("URL Google Sheets belum diatur, hubungi pembuat aplikasi");
+  }
+  const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
+  if(!res.ok) throw new Error("Gagal mengambil data (status " + res.status + ")");
+  const text = await res.text();
+  entries = entriesFromRows(parseCSV(text));
+  return entries.length;
+}
+
+async function fetchRekapSourceEntries(){
+  if(!WEBAPP_URL || !WEBAPP_URL.startsWith("http")){
+    throw new Error("URL Apps Script belum diatur");
+  }
+  const res = await fetch(WEBAPP_URL + "?action=getRekapSource&t=" + Date.now());
+  const json = await res.json();
+  if(json.status !== "ok") throw new Error(json.message || "Gagal membaca sheet rekap");
+  return entriesFromRows(json.rows);
 }
 
 async function handleLoadFromSheet(){
@@ -1706,8 +1718,9 @@ function renderLedger(){
     });
   });
 }
-function getFilteredStatus(){
-  let list = sFilterKategori ? entries.filter(e => e.kategori === sFilterKategori) : entries;
+function getFiltered(src){
+  const base = src || entries;
+  let list = filterKategori ? base.filter(e => e.kategori === filterKategori) : base;
   if(sFilterNama.trim()){
     const q = sFilterNama.trim().toLowerCase();
     list = list.filter(e => (e.namaLengkap || "").toLowerCase().includes(q));
@@ -2577,7 +2590,7 @@ function renderRekapGroups(){
     </div>`).join("");
 }
 function renderRekapStaff(){
-  const list = getFiltered();
+ const list = rekapList();
   const totals = {};
   list.forEach(e => {
     const n = (e.namaLengkap || "").trim() || "Tanpa Nama";
@@ -2596,9 +2609,28 @@ function renderRekapStaff(){
   document.getElementById("rekapSummary").textContent = list.length + " klaim, " + rekapStaffNames.length + " staff, total " + formatRupiah(total);
 }
 function openRekap(){
-  const list = getFiltered();
+  let rekapEntries = null;
+function rekapList(){ return getFiltered(rekapEntries || entries); }
+
+async function openRekap(){
+  const btn = document.getElementById("rekapBtn");
+  const original = btn.innerHTML;
+  btn.innerHTML = "Memuat data rekap...";
+  btn.disabled = true;
+  try{
+    rekapEntries = await fetchRekapSourceEntries();
+  }catch(err){
+    console.error(err);
+    showToast("Gagal memuat sheet rekap: " + err.message, true);
+    return;
+  }finally{
+    btn.innerHTML = original;
+    btn.disabled = false;
+  }
+
+  const list = rekapList();
   if(list.length === 0){
-    showToast("Tidak ada data. Muat data dari Google Sheets dan atur filter dulu", true);
+    showToast("Tidak ada data di sheet Rekap Final Reimbursement (cek juga filter di atas)", true);
     return;
   }
   rekapCfg = loadRekapCfg();
@@ -2622,7 +2654,7 @@ function closeRekap(){
 }
 async function handleRekapDownload(){
   if(typeof ExcelJS === "undefined"){ showToast("Library ExcelJS gagal dimuat, cek koneksi internet", true); return; }
-  const list = getFiltered();
+  const list = rekapList();
   if(list.length === 0){ showToast("Tidak ada data untuk direkap", true); return; }
   const cfg = {
     periode: document.getElementById("rekapPeriode").value.trim(),
