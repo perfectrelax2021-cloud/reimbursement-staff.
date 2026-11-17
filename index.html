@@ -2544,9 +2544,8 @@ function rekapFillSheet(ws, head, blocks){
   let grand = 0;
 
   blocks.forEach(b => {
-    const first = r;
+    const first = r
     const colSums = [0,0,0,0,0,0,0];
-    const first = r;
     const nrek = NOREK[b.nama] ? String(NOREK[b.nama]) : "";
     b.rows.forEach(row => {
       const rowTotal = row.amt.reduce((a, x) => a + x, 0);
