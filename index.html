@@ -795,6 +795,79 @@ const STAFF = [
   { kode: "D027", lokasi: "Bandara International Raja Haji Fisabililah" },
   { kode: "C074", lokasi: "RSUD Sayang Cianjur" },
   ];
+  const NOREK = {
+  "Ahmad Alfianor": "1230013471380",
+  "Alfarid Akbar Prasetyo": "1875144166",
+  "Arif Hidayat": "1230013472925",
+  "Ariyanti Rukmana": "1985731363",
+  "Darizal": "1230013517661",
+  "Dhaifullah Ristamam Purba": "1907927722",
+  "Dimas Aji Prasetyo": "1230013472982",
+  "Egi Gusriadi": "1230013478344",
+  "Erwin Pratama": "1230013477411",
+  "Ezra Saputra Noverianto Buulolo": "123001357821",
+  "Fadila Putri Syahnur": "1230013470655",
+  "Fivo Atanta Fuandi": "1560027380924",
+  "Hajis Ahmad": "1230013505922",
+  "Haris Maulana": "1890664550",
+  "Ilham Romadoni": "1230013475662",
+  "Indra Gani Jaya Harahap": "1936653608",
+  "Indrawan Syahputra": "2050386002",
+  "Izis Irma Syuriyani": "1230013477239",
+  "Jandi Jumegi": "1230013476470",
+  "Khairul Adzhar Siregar": "1080033870032",
+  "Khairul Albar Fahriza": "1230013507217",
+  "Lidya": "1230013473279",
+  "M Anggi Syaputra": "1230013471570",
+  "M Nursalim": "1854565778",
+  "M Rahadian Hasbi": "1240016629256",
+  "Meliana Fauziah": "1230013597291",
+  "Muhamad Nazmi": "1230013505997",
+  "Muhammad Didan Firmansyah": "1814899981",
+  "Muhammad Filana Al Baroy": "1933940447",
+  "Muhammad Rosul": "1902653222",
+  "Naufal Al Munawwar": "1926588662",
+  "May Lastri Verawati": "1230013474269",
+  "Nurul Anam": "1140033562128",
+  "Rachmat Riadi Koeswar": "1230013597283",
+  "Rahel Dearma Purba": "1230013471489",
+  "Rais Nurdiansah": "1730021401147",
+  "Raulina Br Silalahi": "1230013480878",
+  "Rere Andika": "1230013613262",
+  "Rurik Tiana": "1230013506078",
+  "Sayed Ashfar Qeis": "1230013566577",
+  "Siti Nurfadila Maulida": "1230013473253",
+  "Suparyono": "1230013510856",
+  "Susilawati": "1230013473287",
+  "Yulia Novriamirda Warni": "1381930046",
+  "Zul Fadly": "1230013474723",
+  "Abdul Muhdy": "1230013473246",
+  "Putri Rahayu": "1903561259",
+  "Kiki Hidayat": "1846483170",
+  "M Soleh": "1110015288505",
+  "Nurul Hijrah": "2032540434",
+  "Riki Efriandra": "1230013471091",
+  "Azwar Ariansyah": "1230013517687",
+  "Vonnia": "1230013478393",
+  "Dhita husnul khulifah": "1230013478872",
+  "Muhammad Ikhsan Fahmi": "1230013475274",
+  "Alya Al Hafiz": "1720007298344",
+  "Alfandi Ritonga": "1230013471794",
+  "Islami Putri Setiawati": "1110021998774",
+  "M Abdullah Aziz": "1230013476777",
+  "Agus Karisman Laia": "1070024681613",
+  "Wulan Marshanda": "1090025757907",
+  "Imelda Putri Ananda": "1130022999522",
+  "Arya kamandanu": "1760009788496",
+  "Ahmadil Pirsan": "1230013500733",
+  "Fauzan": "1850696840",
+  "Yovi Artika": "1090025918566",
+  "M Fauzi": "1858552346",
+  "Syahlini": "1921252558",
+  "Muhji": "1080028040393",
+  "Rani Rizki Ariani": "1230013471083",
+  "Bunga Ahista Rania": "1384461376",
+};
 </script>
 <body>
 
@@ -2500,6 +2573,13 @@ function rekapFillSheet(ws, head, blocks){
       ws.getCell(r, c).value = { formula: "SUM(" + colL(c) + first + ":" + colL(c) + last + ")", result: colSums[c - 5] };
     }
     ws.getCell(r, 12).value = { formula: "SUM(L" + first + ":L" + last + ")", result: staffTotal };
+    const nr = NOREK[b.nama];
+if(nr){
+  const nc = ws.getCell(r, 13);
+  nc.value = String(nr);
+  nc.numFmt = "@";
+  nc.alignment = { horizontal: "center" };
+}
     for(let c = 1; c <= 13; c++){
       const cell = ws.getCell(r, c);
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
