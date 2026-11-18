@@ -805,7 +805,7 @@ const STAFF = [
   "Dimas Aji Prasetyo": "1230013472982",
   "Egi Gusriadi": "1230013478344",
   "Erwin Pratama": "1230013477411",
-  "Ezra Saputra Noverianto Buulolo": "123001357821",
+  "Ezra Saputra Noverianto Buulolo": "1230013573821",
   "Fadila Putri Syahnur": "1230013470655",
   "Fivo Atanta Fuandi": "1560027380924",
   "Hajis Ahmad": "1230013505922",
@@ -1066,6 +1066,7 @@ const STAFF = [
     <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
       <span style="font-size:12px; color:#66748C;">Kolom No Rekening dikosongkan, isi di Excel setelah diunduh.</span>
       <button type="button" class="export-btn" id="rekapDownloadBtn">&#128190; Unduh Rekap Final</button>
+      <button type="button" class="export-btn" id="rekapCoverBtn">&#128196; Unduh Halaman Depan</button>
     </div>
   </div>
 </div>
@@ -2705,6 +2706,176 @@ function openRekap(){
 function closeRekap(){
   document.getElementById("rekapOverlay").classList.add("hidden");
 }
+  /* ===== HALAMAN DEPAN REKAPAN ===== */
+/* Halaman mana sebuah kelompok masuk: Mandiri -> halaman "M" (PR-104M), selain itu -> halaman utama (PR-104).
+   Ubah fungsi ini kalau pembagian halamannya mau lain. */
+function coverPageKeyOf(g){
+  return /mandiri/i.test(g.bank || "") ? "M" : "";
+}
+function coverNorek(nama){
+  if(typeof NOREK === "undefined") return "";
+  const v = NOREK[nama];
+  return v && String(v).trim() !== "-" ? String(v).trim() : "";
+}
+
+function coverPlan(list, cfg){
+  const totals = {};
+  list.forEach(e => {
+    const n = (e.namaLengkap || "").trim() || "Tanpa Nama";
+    totals[n] = (totals[n] || 0) + (Number(e.nominal) || 0);
+  });
+  const groupIds = new Set(cfg.groups.map(g => g.id));
+  const byGroup = {};
+  Object.keys(totals).sort((a, b) => a.localeCompare(b)).forEach(n => {
+    const gid = groupIds.has(cfg.assign[n]) ? cfg.assign[n] : "_none";
+    (byGroup[gid] = byGroup[gid] || []).push({ nama: n, total: totals[n], norek: coverNorek(n) });
+  });
+  const pages = {}, order = [];
+  cfg.groups.concat([{ id: "_none", bank: "Belum diatur", kelompok: "", none: true }]).forEach(g => {
+    const staff = byGroup[g.id];
+    if(!staff || !staff.length) return;
+    const key = g.none ? "_none" : coverPageKeyOf(g);
+    if(!pages[key]){ pages[key] = { key: key, sections: [] }; order.push(key); }
+    pages[key].sections.push({ title: (g.bank || "") + (g.kelompok ? " - " + g.kelompok : ""), staff: staff, hasKelompok: !!g.kelompok });
+  });
+  return order.map(k => {
+    const p = pages[k];
+    /* kelompok tanpa nama (mis. MANDIRI) tampil lebih dulu, baru yang berkelompok (mis. MANDIRI - Back Office) */
+    p.sections = p.sections.map((x, i) => ({ x: x, i: i })).sort((a, b) => (a.x.hasKelompok - b.x.hasKelompok) || (a.i - b.i)).map(o => o.x);
+    if(k === "_none") return { name: "Belum diatur", kode: "-", sections: p.sections };
+    return {
+      name: cfg.nomorDasar + (k === "M" ? " MANDIRI" : ""),
+      kode: "PR-" + cfg.nomorDasar + k,
+      sections: p.sections
+    };
+  });
+}
+
+function coverFillSheet(ws, kode, sections){
+  const thin = { style: "thin" };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
+  const RP = '_-"Rp"* #,##0_-;\\-"Rp"* #,##0_-;_-"Rp"* "-"_-;_-@_-';
+  const RP_BIG = '"Rp"#,##0';
+  const F = (o) => Object.assign({ name: "Calibri", size: 11 }, o || {});
+  [9.9, 43, 18, 20.3].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+  let r = 3;
+  const subtotalRows = [];
+  let grand = 0;
+
+  sections.forEach((s, si) => {
+    ws.mergeCells(r, 1, r, 2);
+    const t = ws.getCell(r, 1);
+    t.value = s.title;
+    t.font = F({ bold: true });
+    t.alignment = { horizontal: "left", vertical: "middle" };
+    ws.getCell(r, 1).border = { bottom: thin };
+    ws.getCell(r, 2).border = { bottom: thin };
+    if(si === 0){
+      const k = ws.getCell(r, 4);
+      k.value = kode;
+      k.font = F({ bold: true });
+      k.alignment = { horizontal: "center", vertical: "middle" };
+    }
+    ws.getRow(r).height = si === 0 ? 27 : 19.5;
+    r++;
+
+    ["NO.", "NAMA", "NO. REKENING", "JUMLAH"].forEach((h, i) => {
+      const c = ws.getCell(r, i + 1);
+      c.value = h; c.font = F({ bold: true });
+      c.alignment = { horizontal: "center", vertical: "middle" };
+      c.border = border;
+    });
+    r++;
+
+    const first = r;
+    let sum = 0;
+    s.staff.forEach((p, i) => {
+      sum += p.total;
+      const a = ws.getCell(r, 1); a.value = i + 1; a.alignment = { horizontal: "center", vertical: "middle" };
+      const b = ws.getCell(r, 2); b.value = p.nama; b.alignment = { horizontal: "left", vertical: "middle" };
+      const c = ws.getCell(r, 3); c.value = p.norek; c.numFmt = "@"; c.alignment = { horizontal: "center", vertical: "middle" };
+      const d = ws.getCell(r, 4); d.value = p.total; d.numFmt = RP;
+      for(let k = 1; k <= 4; k++){
+        const cell = ws.getCell(r, k);
+        cell.font = F();
+        cell.border = border;
+      }
+      r++;
+    });
+    const last = r - 1;
+
+    const st = ws.getCell(r, 4);
+    st.value = { formula: "SUM(D" + first + ":D" + last + ")", result: sum };
+    st.numFmt = RP_BIG;
+    st.font = F({ size: 14, bold: true });
+    st.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
+    st.alignment = { vertical: "middle" };
+    subtotalRows.push(r);
+    grand += sum;
+    r++;
+  });
+
+  r += 2; // jarak sebelum Total Payment
+  ws.mergeCells(r, 1, r, 3);
+  const tl = ws.getCell(r, 1);
+  tl.value = "Total Payment";
+  tl.font = F();
+  tl.alignment = { horizontal: "center", vertical: "middle" };
+  const gt = ws.getCell(r, 4);
+  gt.value = { formula: subtotalRows.map(x => "D" + x).join("+"), result: grand };
+  gt.numFmt = RP_BIG;
+  gt.font = F({ size: 16, bold: true });
+  gt.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
+  gt.alignment = { vertical: "middle" };
+  ws.getRow(r).height = 30;
+
+  ws.views = [{ zoomScale: 80 }];
+  ws.pageSetup = { orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0, printArea: "A3:D" + r };
+}
+
+async function handleCoverDownload(){
+  if(typeof ExcelJS === "undefined"){ showToast("Library ExcelJS gagal dimuat, cek koneksi internet", true); return; }
+  const list = getFiltered();
+  if(list.length === 0){ showToast("Tidak ada data untuk direkap", true); return; }
+  const cfg = {
+  periode: document.getElementById("rekapPeriode").value.trim(),
+  nomorDasar: document.getElementById("rekapNomorDasar").value.trim(),
+  bulanTahun: document.getElementById("rekapBulanTahun").value.trim(),
+  groups: rekapCfg.groups,
+  assign: rekapCfg.assign || {}
+};
+  const btn = document.getElementById("rekapCoverBtn");
+  const original = btn.innerHTML;
+  btn.innerHTML = "Menyiapkan file...";
+  btn.disabled = true;
+  try{
+    const wb = new ExcelJS.Workbook();
+    const used = new Set();
+    const pages = coverPlan(list, cfg);
+    pages.forEach(p => {
+      const ws = wb.addWorksheet(sanitizeSheetName(p.name, used));
+      coverFillSheet(ws, p.kode, p.sections);
+    });
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "halaman-depan-rekapan-" + (cfg.periode.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || todayISO()) + ".xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Halaman depan diunduh (" + pages.length + " sheet)");
+  }catch(err){
+    console.error(err);
+    showToast("Gagal membuat halaman depan: " + err.message, true);
+  }finally{
+    btn.innerHTML = original;
+    btn.disabled = false;
+  }
+}
 async function handleRekapDownload(){
   if(typeof ExcelJS === "undefined"){ showToast("Library ExcelJS gagal dimuat, cek koneksi internet", true); return; }
   const list = getFiltered();
@@ -2748,6 +2919,7 @@ document.addEventListener("click", ev => {
   if(t.closest("#rekapBtn")){ openRekap(); return; }
   if(t.closest("#rekapCloseBtn")){ closeRekap(); return; }
   if(t.closest("#rekapDownloadBtn")){ handleRekapDownload(); return; }
+  if(t.closest("#rekapCoverBtn")){ handleCoverDownload(); return; }
   if(!rekapCfg) return;
   if(t.closest("#rekapAddGroupBtn")){
     rekapCfg.groups.push({ id: "g" + Date.now(), bank: "", suffix: "", kelompok: "" });
